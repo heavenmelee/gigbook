@@ -1,6 +1,24 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gte, like, lte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import {
+  InsertUser,
+  users,
+  musicianProfiles,
+  listings,
+  availability,
+  bookings,
+  payments,
+  reviews,
+  settings,
+  activityLogs,
+  InsertMusicianProfile,
+  InsertListing,
+  InsertAvailability,
+  InsertBooking,
+  InsertPayment,
+  InsertReview,
+  InsertActivityLog,
+} from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -35,7 +53,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "phone", "loginMethod", "profilePhoto"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -58,6 +76,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     } else if (user.openId === ENV.ownerOpenId) {
       values.role = "admin";
       updateSet.role = "admin";
+      values.status = "approved";
+      updateSet.status = "approved";
+    }
+    if (user.status !== undefined) {
+      values.status = user.status;
+      updateSet.status = user.status;
     }
 
     if (!values.lastSignedIn) {
@@ -89,4 +113,437 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateUserRole(userId: number, role: "user" | "musician" | "admin") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ role }).where(eq(users.id, userId));
+}
+
+export async function updateUserStatus(userId: number, status: "pending" | "approved" | "suspended") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ status }).where(eq(users.id, userId));
+}
+
+export async function getPendingUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users).where(eq(users.status, "pending")).orderBy(desc(users.createdAt));
+}
+
+export async function getAllUsers(role?: "user" | "musician" | "admin") {
+  const db = await getDb();
+  if (!db) return [];
+  if (role) {
+    return db.select().from(users).where(eq(users.role, role)).orderBy(desc(users.createdAt));
+  }
+  return db.select().from(users).orderBy(desc(users.createdAt));
+}
+
+// ==================== MUSICIAN PROFILE QUERIES ====================
+
+export async function createMusicianProfile(data: InsertMusicianProfile) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(musicianProfiles).values(data);
+  return result[0].insertId;
+}
+
+export async function getMusicianProfileByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(musicianProfiles).where(eq(musicianProfiles.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getMusicianProfileById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(musicianProfiles).where(eq(musicianProfiles.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateMusicianProfile(userId: number, data: Partial<InsertMusicianProfile>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(musicianProfiles).set(data).where(eq(musicianProfiles.userId, userId));
+}
+
+export async function getAllMusicians(filters?: { genre?: string; location?: string; search?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [];
+
+  if (filters?.genre) {
+    conditions.push(eq(musicianProfiles.genre, filters.genre));
+  }
+  if (filters?.location) {
+    conditions.push(like(musicianProfiles.location, `%${filters.location}%`));
+  }
+  if (filters?.search) {
+    conditions.push(
+      or(
+        like(musicianProfiles.stageName, `%${filters.search}%`),
+        like(musicianProfiles.bio, `%${filters.search}%`)
+      )
+    );
+  }
+
+  const query = db
+    .select({
+      profile: musicianProfiles,
+      user: users,
+    })
+    .from(musicianProfiles)
+    .innerJoin(users, eq(musicianProfiles.userId, users.id))
+    .where(and(eq(users.status, "approved"), ...conditions))
+    .orderBy(desc(musicianProfiles.rating));
+
+  return query;
+}
+
+export async function addStrikeToMusician(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(musicianProfiles)
+    .set({ strikes: sql`${musicianProfiles.strikes} + 1` })
+    .where(eq(musicianProfiles.userId, userId));
+}
+
+// ==================== LISTING QUERIES ====================
+
+export async function createListing(data: InsertListing) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(listings).values(data);
+  return result[0].insertId;
+}
+
+export async function getListingById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(listings).where(eq(listings.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getListingsByMusicianId(musicianId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(listings).where(eq(listings.musicianId, musicianId)).orderBy(desc(listings.createdAt));
+}
+
+export async function updateListing(id: number, data: Partial<InsertListing>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(listings).set(data).where(eq(listings.id, id));
+}
+
+export async function deleteListing(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(listings).set({ isActive: false }).where(eq(listings.id, id));
+}
+
+// ==================== AVAILABILITY QUERIES ====================
+
+export async function setAvailability(data: InsertAvailability) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await db
+    .select()
+    .from(availability)
+    .where(and(eq(availability.musicianId, data.musicianId), eq(availability.date, data.date)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(availability)
+      .set({ isAvailable: data.isAvailable, startTime: data.startTime, endTime: data.endTime })
+      .where(eq(availability.id, existing[0].id));
+    return existing[0].id;
+  } else {
+    const result = await db.insert(availability).values(data);
+    return result[0].insertId;
+  }
+}
+
+export async function getAvailabilityByMusicianId(musicianId: number, startDate?: string, endDate?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [eq(availability.musicianId, musicianId)];
+  if (startDate) conditions.push(gte(availability.date, startDate));
+  if (endDate) conditions.push(lte(availability.date, endDate));
+
+  return db.select().from(availability).where(and(...conditions)).orderBy(availability.date);
+}
+
+export async function checkAvailability(musicianId: number, date: string) {
+  const db = await getDb();
+  if (!db) return true;
+
+  const result = await db
+    .select()
+    .from(availability)
+    .where(and(eq(availability.musicianId, musicianId), eq(availability.date, date)))
+    .limit(1);
+
+  if (result.length === 0) return true;
+  return result[0].isAvailable;
+}
+
+// ==================== BOOKING QUERIES ====================
+
+export async function createBooking(data: InsertBooking) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(bookings).values(data);
+  return result[0].insertId;
+}
+
+export async function getBookingById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getBookingsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(bookings).where(eq(bookings.userId, userId)).orderBy(desc(bookings.createdAt));
+}
+
+export async function getBookingsByMusicianId(musicianId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(bookings).where(eq(bookings.musicianId, musicianId)).orderBy(desc(bookings.createdAt));
+}
+
+export async function getPendingApprovalBookings() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(bookings).where(eq(bookings.status, "pending_approval")).orderBy(desc(bookings.createdAt));
+}
+
+export async function getAllBookings(status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (status) {
+    return db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.status, status as any))
+      .orderBy(desc(bookings.createdAt));
+  }
+  return db.select().from(bookings).orderBy(desc(bookings.createdAt));
+}
+
+export async function updateBookingStatus(
+  id: number,
+  status: string,
+  additionalData?: { cancelledBy?: "user" | "musician" | "admin"; cancellationReason?: string; cancelledAt?: Date; completedAt?: Date }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(bookings)
+    .set({ status: status as any, ...additionalData })
+    .where(eq(bookings.id, id));
+}
+
+// ==================== PAYMENT QUERIES ====================
+
+export async function createPayment(data: InsertPayment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(payments).values(data);
+  return result[0].insertId;
+}
+
+export async function getPaymentByBookingId(bookingId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(payments).where(eq(payments.bookingId, bookingId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getPaymentsByMusicianId(musicianId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payments).where(eq(payments.musicianId, musicianId)).orderBy(desc(payments.createdAt));
+}
+
+export async function updatePaymentStatus(
+  id: number,
+  status: string,
+  additionalData?: {
+    escrowAt?: Date;
+    releasedAt?: Date;
+    refundedAt?: Date;
+    penaltyAmount?: string;
+    penaltyReason?: string;
+    refundAmount?: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(payments)
+    .set({ status: status as any, ...additionalData })
+    .where(eq(payments.id, id));
+}
+
+export async function getEscrowPayments() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payments).where(eq(payments.status, "escrow")).orderBy(desc(payments.createdAt));
+}
+
+export async function getAllPayments() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payments).orderBy(desc(payments.createdAt));
+}
+
+// ==================== REVIEW QUERIES ====================
+
+export async function createReview(data: InsertReview) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(reviews).values(data);
+
+  const musicianReviews = await db
+    .select()
+    .from(reviews)
+    .where(eq(reviews.musicianId, data.musicianId));
+
+  const avgRating = musicianReviews.reduce((sum, r) => sum + r.rating, 0) / musicianReviews.length;
+
+  await db
+    .update(musicianProfiles)
+    .set({
+      rating: avgRating.toFixed(2),
+      totalReviews: musicianReviews.length,
+    })
+    .where(eq(musicianProfiles.userId, data.musicianId));
+
+  return result[0].insertId;
+}
+
+export async function getReviewsByMusicianId(musicianId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(reviews).where(eq(reviews.musicianId, musicianId)).orderBy(desc(reviews.createdAt));
+}
+
+// ==================== SETTINGS QUERIES ====================
+
+export async function getSetting(key: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(settings).where(eq(settings.settingKey, key)).limit(1);
+  return result.length > 0 ? result[0].settingValue : undefined;
+}
+
+export async function updateSetting(key: string, value: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(settings).set({ settingValue: value }).where(eq(settings.settingKey, key));
+}
+
+export async function getAllSettings() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(settings);
+}
+
+// ==================== ACTIVITY LOG QUERIES ====================
+
+export async function logActivity(data: InsertActivityLog) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(activityLogs).values(data);
+}
+
+export async function getRecentActivity(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(activityLogs).orderBy(desc(activityLogs.createdAt)).limit(limit);
+}
+
+// ==================== STATS QUERIES ====================
+
+export async function getAdminStats() {
+  const db = await getDb();
+  if (!db) return { totalUsers: 0, totalMusicians: 0, pendingApprovals: 0, totalBookings: 0, totalRevenue: "0" };
+
+  const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+  const [musicianCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(eq(users.role, "musician"));
+  const [pendingCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(eq(users.status, "pending"));
+  const [bookingCount] = await db.select({ count: sql<number>`count(*)` }).from(bookings);
+  const [revenue] = await db
+    .select({ total: sql<string>`COALESCE(SUM(commission), 0)` })
+    .from(payments)
+    .where(eq(payments.status, "released"));
+
+  return {
+    totalUsers: userCount.count,
+    totalMusicians: musicianCount.count,
+    pendingApprovals: pendingCount.count,
+    totalBookings: bookingCount.count,
+    totalRevenue: revenue.total || "0",
+  };
+}
+
+export async function getMusicianStats(userId: number) {
+  const db = await getDb();
+  if (!db) return { totalEarnings: "0", pendingPayouts: "0", upcomingGigs: 0, totalGigs: 0 };
+
+  const profile = await getMusicianProfileByUserId(userId);
+  if (!profile) return { totalEarnings: "0", pendingPayouts: "0", upcomingGigs: 0, totalGigs: 0 };
+
+  const [earnings] = await db
+    .select({ total: sql<string>`COALESCE(SUM(musicianPayout), 0)` })
+    .from(payments)
+    .where(and(eq(payments.musicianId, profile.id), eq(payments.status, "released")));
+
+  const [pending] = await db
+    .select({ total: sql<string>`COALESCE(SUM(musicianPayout), 0)` })
+    .from(payments)
+    .where(and(eq(payments.musicianId, profile.id), eq(payments.status, "escrow")));
+
+  const today = new Date().toISOString().split("T")[0];
+  const [upcoming] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(bookings)
+    .where(and(eq(bookings.musicianId, profile.id), eq(bookings.status, "confirmed"), gte(bookings.eventDate, today)));
+
+  const [total] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(bookings)
+    .where(and(eq(bookings.musicianId, profile.id), eq(bookings.status, "completed")));
+
+  return {
+    totalEarnings: earnings.total || "0",
+    pendingPayouts: pending.total || "0",
+    upcomingGigs: upcoming.count,
+    totalGigs: total.count,
+  };
+}

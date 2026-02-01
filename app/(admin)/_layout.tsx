@@ -8,11 +8,11 @@ import { Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { useAuthContext } from "@/lib/auth-context";
 
-export default function TabLayout() {
+export default function AdminTabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, isLoading, isAuthenticated, isApproved, isPending, isMusician, isAdmin } = useAuthContext();
+  const { isLoading, isAuthenticated, isAdmin } = useAuthContext();
 
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
   const tabBarHeight = 56 + bottomPadding;
@@ -25,21 +25,11 @@ export default function TabLayout() {
       return;
     }
 
-    if (isPending) {
-      router.replace("/pending-approval");
+    if (!isAdmin) {
+      router.replace("/(tabs)");
       return;
     }
-
-    if (isMusician) {
-      router.replace("/(musician)");
-      return;
-    }
-
-    if (isAdmin) {
-      router.replace("/(admin)");
-      return;
-    }
-  }, [isLoading, isAuthenticated, isApproved, isPending, isMusician, isAdmin, router]);
+  }, [isLoading, isAuthenticated, isAdmin, router]);
 
   return (
     <Tabs
@@ -60,15 +50,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Utama",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Dashboard",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="search"
+        name="approvals"
         options={{
-          title: "Cari",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
+          title: "Kelulusan",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="checkmark.circle.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -79,10 +69,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="payments"
         options={{
-          title: "Profil",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+          title: "Bayaran",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="creditcard.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Tetapan",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gear" color={color} />,
         }}
       />
     </Tabs>

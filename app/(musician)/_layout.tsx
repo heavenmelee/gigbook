@@ -8,11 +8,11 @@ import { Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { useAuthContext } from "@/lib/auth-context";
 
-export default function TabLayout() {
+export default function MusicianTabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, isLoading, isAuthenticated, isApproved, isPending, isMusician, isAdmin } = useAuthContext();
+  const { isLoading, isAuthenticated, isMusician, isApproved, isPending } = useAuthContext();
 
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
   const tabBarHeight = 56 + bottomPadding;
@@ -30,16 +30,11 @@ export default function TabLayout() {
       return;
     }
 
-    if (isMusician) {
-      router.replace("/(musician)");
+    if (!isMusician) {
+      router.replace("/(tabs)");
       return;
     }
-
-    if (isAdmin) {
-      router.replace("/(admin)");
-      return;
-    }
-  }, [isLoading, isAuthenticated, isApproved, isPending, isMusician, isAdmin, router]);
+  }, [isLoading, isAuthenticated, isMusician, isApproved, isPending, router]);
 
   return (
     <Tabs
@@ -60,22 +55,29 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Utama",
+          title: "Dashboard",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="search"
+        name="listings"
         options={{
-          title: "Cari",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
+          title: "Listing",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="music.note.list" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: "Kalendar",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
         name="bookings"
         options={{
           title: "Tempahan",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="checkmark.circle.fill" color={color} />,
         }}
       />
       <Tabs.Screen

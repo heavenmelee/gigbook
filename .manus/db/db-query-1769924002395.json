@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO settings (settingKey, settingValue, description) VALUES \n('commission_rate', '10', 'Platform commission percentage'),\n('user_cancel_penalty_72h', '20', 'User cancellation penalty percentage within 72 hours'),\n('musician_cancel_penalty_72h', '30', 'Musician cancellation penalty percentage within 72 hours'),\n('max_strikes', '3', 'Maximum strikes before musician suspension'),\n('currency', 'MYR', 'Default currency');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2ynB7yCcC8fFwgA.9590bf5cc734 --database 5F6XpZZSSf9Qr8ZPCE2Hax --execute INSERT INTO settings (settingKey, settingValue, description) VALUES \n('commission_rate', '10', 'Platform commission percentage'),\n('user_cancel_penalty_72h', '20', 'User cancellation penalty percentage within 72 hours'),\n('musician_cancel_penalty_72h', '30', 'Musician cancellation penalty percentage within 72 hours'),\n('max_strikes', '3', 'Maximum strikes before musician suspension'),\n('currency', 'MYR', 'Default currency');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1584
+}
