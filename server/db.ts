@@ -113,6 +113,62 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByPhone(phone: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createUserWithPassword(data: {
+  name: string;
+  email?: string;
+  phone?: string;
+  password: string;
+  role?: "user" | "musician" | "admin";
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Generate a unique openId for in-app users
+  const openId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  
+  const result = await db.insert(users).values({
+    openId,
+    name: data.name,
+    email: data.email || null,
+    phone: data.phone || null,
+    password: data.password,
+    loginMethod: "email",
+    role: data.role || "user",
+    status: "pending",
+    lastSignedIn: new Date(),
+  });
+  
+  return result[0].insertId;
+}
+
+export async function updateUserPassword(userId: number, hashedPassword: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userId));
+}
+
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;

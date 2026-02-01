@@ -36,6 +36,9 @@ const MAPPING = {
   "creditcard.fill": "credit-card",
   "person.2.fill": "people",
   "chart.bar.fill": "bar-chart",
+  "music.note": "music-note",
+  "eye.fill": "visibility",
+  "eye.slash.fill": "visibility-off",
 } as IconMapping;
 
 /**

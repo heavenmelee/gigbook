@@ -69,3 +69,8 @@
 ## Bug Fixes
 - [x] Fix OAuth redirect URI error for Expo Go (exp:// scheme not allowed)
 
+- [x] Replace OAuth browser login with in-app email/password authentication
+- [x] Create login screen with email and password fields
+- [x] Create registration screen for new users
+- [x] Update backend to support email/password auth with password hashing
+

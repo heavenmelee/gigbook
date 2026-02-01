@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { COOKIE_NAME } from "../shared/const.js";
+import bcrypt from "bcryptjs";
+import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const.js";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { sdk } from "./_core/sdk";
 import * as db from "./db";
 
 export const appRouter = router({
@@ -10,6 +12,114 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+    
+    register: publicProcedure
+      .input(z.object({
+        name: z.string().min(2, "Nama mesti sekurang-kurangnya 2 aksara"),
+        email: z.string().email("Email tidak sah"),
+        password: z.string().min(6, "Password mesti sekurang-kurangnya 6 aksara"),
+        role: z.enum(["user", "musician"]).default("user"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check if email already exists
+        const existingUser = await db.getUserByEmail(input.email);
+        if (existingUser) {
+          throw new Error("Email sudah didaftarkan");
+        }
+        
+        // Hash password
+        const hashedPassword = await bcrypt.hash(input.password, 10);
+        
+        // Create user
+        const userId = await db.createUserWithPassword({
+          name: input.name,
+          email: input.email,
+          password: hashedPassword,
+          role: input.role,
+        });
+        
+        // Get the created user
+        const user = await db.getUserById(userId);
+        if (!user) throw new Error("Gagal mencipta akaun");
+        
+        // Create musician profile if role is musician
+        if (input.role === "musician") {
+          await db.createMusicianProfile({ userId });
+        }
+        
+        // Create session token
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+        
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        
+        return {
+          success: true,
+          sessionToken,
+          user: {
+            id: user.id,
+            openId: user.openId,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+          },
+        };
+      }),
+    
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email("Email tidak sah"),
+        password: z.string().min(1, "Password diperlukan"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Find user by email
+        const user = await db.getUserByEmail(input.email);
+        if (!user) {
+          throw new Error("Email atau password tidak sah");
+        }
+        
+        // Check password
+        if (!user.password) {
+          throw new Error("Akaun ini tidak mempunyai password. Sila gunakan kaedah login lain.");
+        }
+        
+        const isValidPassword = await bcrypt.compare(input.password, user.password);
+        if (!isValidPassword) {
+          throw new Error("Email atau password tidak sah");
+        }
+        
+        // Update last signed in
+        await db.upsertUser({ openId: user.openId, lastSignedIn: new Date() });
+        
+        // Create session token
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+        
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        
+        return {
+          success: true,
+          sessionToken,
+          user: {
+            id: user.id,
+            openId: user.openId,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+          },
+        };
+      }),
+    
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
