@@ -65,3 +65,7 @@
 - [x] Test cancellation scenarios
 - [x] Final UI polish
 
+
+## Bug Fixes
+- [x] Fix OAuth redirect URI error for Expo Go (exp:// scheme not allowed)
+

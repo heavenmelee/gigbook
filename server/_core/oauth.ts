@@ -118,10 +118,15 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.json({
-        app_session_id: sessionToken,
-        user: buildUserResponse(user),
-      });
+      // Build deep link URL with session token and user info
+      const bundleId = "space.manus.gigbook.t20260201002704";
+      const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
+      const scheme = `manus${timestamp}`;
+      const userJson = Buffer.from(JSON.stringify(buildUserResponse(user))).toString("base64");
+      const deepLinkUrl = `${scheme}://oauth/callback?sessionToken=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(userJson)}`;
+      
+      // Redirect to the deep link
+      res.redirect(302, deepLinkUrl);
     } catch (error) {
       console.error("[OAuth] Mobile exchange failed", error);
       res.status(500).json({ error: "OAuth mobile exchange failed" });

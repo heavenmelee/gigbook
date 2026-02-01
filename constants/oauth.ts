@@ -72,9 +72,9 @@ export const getRedirectUri = () => {
   if (ReactNative.Platform.OS === "web") {
     return `${getApiBaseUrl()}/api/oauth/callback`;
   } else {
-    return Linking.createURL("/oauth/callback", {
-      scheme: env.deepLinkScheme,
-    });
+    // For native apps running in Expo Go, we need to use the API server callback
+    // which will then redirect back to the app via deep link with the session token
+    return `${getApiBaseUrl()}/api/oauth/mobile`;
   }
 };
 
