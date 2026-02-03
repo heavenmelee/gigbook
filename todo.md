@@ -74,3 +74,10 @@
 - [x] Create registration screen for new users
 - [x] Update backend to support email/password auth with password hashing
 
+
+## Approval Flow
+- [x] Update registration to redirect to pending approval screen
+- [x] Block dashboard access for pending users
+- [x] Block musician features for pending musicians
+- [x] Update app navigation to check approval status
+
