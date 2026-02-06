@@ -81,3 +81,10 @@
 - [x] Block musician features for pending musicians
 - [x] Update app navigation to check approval status
 
+
+## User Management (Admin)
+- [x] Add backend routes for user management (list, delete, suspend)
+- [x] Create admin user management screen
+- [x] Implement delete user functionality
+- [x] Implement suspend user functionality
+

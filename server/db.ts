@@ -603,3 +603,23 @@ export async function getMusicianStats(userId: number) {
     totalGigs: total.count,
   };
 }
+
+
+// ==================== USER MANAGEMENT ====================
+
+export async function deleteUser(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete related data first
+  await db.delete(musicianProfiles).where(eq(musicianProfiles.userId, userId));
+  await db.delete(listings).where(eq(listings.musicianId, userId));
+  await db.delete(bookings).where(eq(bookings.userId, userId));
+  await db.delete(bookings).where(eq(bookings.musicianId, userId));
+  await db.delete(payments).where(eq(payments.userId, userId));
+  await db.delete(reviews).where(eq(reviews.userId, userId));
+  await db.delete(reviews).where(eq(reviews.musicianId, userId));
+  
+  // Finally delete the user
+  await db.delete(users).where(eq(users.id, userId));
+}

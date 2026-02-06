@@ -474,6 +474,16 @@ export const appRouter = router({
         return db.getAllUsers(input.role);
       }),
 
+    deleteUser: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("Unauthorized");
+        if (input.userId === ctx.user.id) throw new Error("Tidak boleh delete akaun sendiri");
+        await db.deleteUser(input.userId);
+        await db.logActivity({ userId: ctx.user.id, action: "user_deleted", entityType: "user", entityId: input.userId });
+        return { success: true };
+      }),
+
     getPendingBookings: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") throw new Error("Unauthorized");
       return db.getPendingApprovalBookings();

@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM users WHERE email = 'heavenmelee@gmail.com';\n\nINSERT INTO users (openId, name, email, password, loginMethod, role, status, lastSignedIn, createdAt, updatedAt) \nVALUES (\n  CONCAT('local_', UNIX_TIMESTAMP(NOW()), '_admin'),\n  'Admin Gigbook',\n  'heavenmelee@gmail.com',\n  '$2b$10$w4fRK1TLl5HDyS2wkK5cGuov3wmdV.MaN9jO3FcBtrBRfAxszlbZm',\n  'email',\n  'admin',\n  'approved',\n  NOW(),\n  NOW(),\n  NOW()\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2ynB7yCcC8fFwgA.9590bf5cc734 --database 5F6XpZZSSf9Qr8ZPCE2Hax --execute DELETE FROM users WHERE email = 'heavenmelee@gmail.com';\n\nINSERT INTO users (openId, name, email, password, loginMethod, role, status, lastSignedIn, createdAt, updatedAt) \nVALUES (\n  CONCAT('local_', UNIX_TIMESTAMP(NOW()), '_admin'),\n  'Admin Gigbook',\n  'heavenmelee@gmail.com',\n  '$2b$10$w4fRK1TLl5HDyS2wkK5cGuov3wmdV.MaN9jO3FcBtrBRfAxszlbZm',\n  'email',\n  'admin',\n  'approved',\n  NOW(),\n  NOW(),\n  NOW()\n)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1813
+}
