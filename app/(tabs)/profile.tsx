@@ -1,16 +1,27 @@
-import { Text, View, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from "react-native";
+import { Text, View, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { useAuthContext } from "@/lib/auth-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 
 export default function UserProfileScreen() {
   const colors = useColors();
   const { user } = useAuthContext();
   const { logout } = useAuth();
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/welcome");
+    } catch (error: any) {
+      Alert.alert("Ralat", error.message || "Gagal log keluar");
+    }
+  };
 
   const { data: profile, refetch } = trpc.user.getProfile.useQuery();
   const { data: bookings } = trpc.booking.getMyBookings.useQuery();
@@ -81,7 +92,7 @@ export default function UserProfileScreen() {
           <Text style={[styles.versionText, { color: colors.muted }]}>Versi 1.0.0</Text>
         </View>
 
-        <TouchableOpacity style={[styles.logoutButton, { borderColor: colors.error }]} onPress={logout}>
+        <TouchableOpacity style={[styles.logoutButton, { borderColor: colors.error }]} onPress={handleLogout}>
           <Text style={{ color: colors.error, fontWeight: "600" }}>Log Keluar</Text>
         </TouchableOpacity>
       </ScrollView>

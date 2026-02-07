@@ -88,3 +88,7 @@
 - [x] Implement delete user functionality
 - [x] Implement suspend user functionality
 
+
+## Bug Fixes
+- [x] Fix logout button not working
+

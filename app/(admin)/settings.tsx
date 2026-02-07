@@ -1,14 +1,25 @@
-import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl } from "react-native";
+import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, Alert } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "expo-router";
 
 export default function AdminSettingsScreen() {
   const colors = useColors();
   const { logout } = useAuth();
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/welcome");
+    } catch (error: any) {
+      Alert.alert("Ralat", error.message || "Gagal log keluar");
+    }
+  };
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -171,7 +182,7 @@ export default function AdminSettingsScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity style={[styles.logoutButton, { borderColor: colors.error }]} onPress={logout}>
+        <TouchableOpacity style={[styles.logoutButton, { borderColor: colors.error }]} onPress={handleLogout}>
           <Text style={{ color: colors.error, fontWeight: "600" }}>Log Keluar</Text>
         </TouchableOpacity>
       </ScrollView>
