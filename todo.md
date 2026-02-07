@@ -92,3 +92,12 @@
 ## Bug Fixes
 - [x] Fix logout button not working
 
+
+## Email Verification
+- [x] Add email verification schema to database
+- [x] Create email verification token generation
+- [ ] Create email sending service
+- [x] Create email verification screen
+- [x] Update registration flow to require email verification
+- [x] Add verification code resend functionality
+

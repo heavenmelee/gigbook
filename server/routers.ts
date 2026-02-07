@@ -125,6 +125,26 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+
+    sendVerificationCode: protectedProcedure.mutation(async ({ ctx }) => {
+      const { token, code } = await db.createEmailVerificationToken(ctx.user.id, ctx.user.email || "");
+      console.log(`[Email] Verification code for ${ctx.user.email}: ${code}`);
+      return { success: true, code };
+    }),
+
+    verifyEmail: protectedProcedure
+      .input(z.object({ code: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const verified = await db.verifyEmailToken(ctx.user.id, input.code);
+        if (!verified) {
+          throw new Error("Kod verifikasi tidak sah atau telah tamat tempoh");
+        }
+        return { success: true };
+      }),
+
+    isEmailVerified: protectedProcedure.query(async ({ ctx }) => {
+      return db.isEmailVerified(ctx.user.id);
+    })
   }),
 
   user: router({

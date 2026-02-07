@@ -101,11 +101,8 @@ export default function WelcomeScreen() {
         });
         await refetch();
         
-        if (result.user.status === "pending") {
-          router.replace("/pending-approval");
-        } else {
-          router.replace("/(tabs)");
-        }
+        // Redirect to email verification first
+        router.replace("/verify-email");
       }
     } catch (error: any) {
       Alert.alert("Pendaftaran Gagal", error.message || "Sila cuba lagi");

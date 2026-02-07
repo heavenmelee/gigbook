@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, like, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, like, lte, or, sql, gt, isNull, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -11,6 +11,7 @@ import {
   reviews,
   settings,
   activityLogs,
+  emailVerificationTokens,
   InsertMusicianProfile,
   InsertListing,
   InsertAvailability,
@@ -18,6 +19,7 @@ import {
   InsertPayment,
   InsertReview,
   InsertActivityLog,
+  InsertEmailVerificationToken,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -622,4 +624,95 @@ export async function deleteUser(userId: number) {
   
   // Finally delete the user
   await db.delete(users).where(eq(users.id, userId));
+}
+
+
+// ==================== EMAIL VERIFICATION ====================
+
+export async function createEmailVerificationToken(userId: number, email: string): Promise<{ token: string; code: string }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Generate 6-digit code and token
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const token = require("crypto").randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  
+  await db.insert(emailVerificationTokens).values({
+    userId,
+    email,
+    token,
+    code,
+    expiresAt,
+  });
+  
+  return { token, code };
+}
+
+export async function verifyEmailToken(userId: number, code: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const token = await db
+    .select()
+    .from(emailVerificationTokens)
+    .where(
+      and(
+        eq(emailVerificationTokens.userId, userId),
+        eq(emailVerificationTokens.code, code),
+        gt(emailVerificationTokens.expiresAt, new Date()),
+        isNull(emailVerificationTokens.verifiedAt)
+      )
+    )
+    .limit(1);
+  
+  if (token.length === 0) return false;
+  
+  // Mark as verified
+  await db
+    .update(emailVerificationTokens)
+    .set({ verifiedAt: new Date() })
+    .where(eq(emailVerificationTokens.id, token[0].id));
+  
+  // Update user email_verified status
+  await db
+    .update(users)
+    .set({ updatedAt: new Date() })
+    .where(eq(users.id, userId));
+  
+  return true;
+}
+
+export async function isEmailVerified(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  const verified = await db
+    .select()
+    .from(emailVerificationTokens)
+    .where(
+      and(
+        eq(emailVerificationTokens.userId, userId),
+        isNotNull(emailVerificationTokens.verifiedAt)
+      )
+    )
+    .limit(1);
+  
+  return verified.length > 0;
+}
+
+export async function getUnverifiedEmailTokens(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db
+    .select()
+    .from(emailVerificationTokens)
+    .where(
+      and(
+        eq(emailVerificationTokens.userId, userId),
+        isNull(emailVerificationTokens.verifiedAt),
+        gt(emailVerificationTokens.expiresAt, new Date())
+      )
+    );
 }
