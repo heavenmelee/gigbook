@@ -101,3 +101,8 @@
 - [x] Update registration flow to require email verification
 - [x] Add verification code resend functionality
 
+
+## Email Validation
+- [x] Block temporary/disposable email addresses
+- [x] Only allow legitimate email providers (Gmail, Yahoo, Outlook, etc)
+

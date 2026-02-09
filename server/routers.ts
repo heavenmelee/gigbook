@@ -6,6 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { sdk } from "./_core/sdk";
 import * as db from "./db";
+import { isLegitimateEmail, getDisposableEmailError } from "./utils/email-validator";
 
 export const appRouter = router({
   system: systemRouter,
@@ -21,6 +22,11 @@ export const appRouter = router({
         role: z.enum(["user", "musician"]).default("user"),
       }))
       .mutation(async ({ ctx, input }) => {
+        // Validate email is not from disposable provider
+        if (!isLegitimateEmail(input.email)) {
+          throw new Error(getDisposableEmailError());
+        }
+        
         // Check if email already exists
         const existingUser = await db.getUserByEmail(input.email);
         if (existingUser) {
