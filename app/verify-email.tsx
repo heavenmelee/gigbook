@@ -5,11 +5,13 @@ import { trpc } from "@/lib/trpc";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import { useAuthContext } from "@/lib/auth-context";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function VerifyEmailScreen() {
   const colors = useColors();
   const router = useRouter();
   const { user } = useAuthContext();
+  const { logout } = useAuth();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -134,6 +136,19 @@ export default function VerifyEmailScreen() {
             Kod verifikasi akan tamat tempoh dalam 24 jam. Jika anda tidak menerima kod, sila semak folder spam anda.
           </Text>
         </View>
+
+        <TouchableOpacity
+          style={[styles.logoutButton, { borderColor: colors.border }]}
+          onPress={async () => {
+            await logout();
+            router.replace("/welcome");
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.logoutText, { color: colors.muted }]}>
+            Log Keluar
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScreenContainer>
   );
@@ -211,5 +226,17 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  logoutButton: {
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

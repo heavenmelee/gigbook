@@ -106,3 +106,7 @@
 - [x] Block temporary/disposable email addresses
 - [x] Only allow legitimate email providers (Gmail, Yahoo, Outlook, etc)
 
+
+## Bug Fixes (Current)
+- [x] Fix logout button not working after registration
+

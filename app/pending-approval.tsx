@@ -43,7 +43,10 @@ export default function PendingApprovalScreen() {
 
         <TouchableOpacity
           style={[styles.logoutButton, { borderColor: colors.border }]}
-          onPress={logout}
+          onPress={async () => {
+            await logout();
+            // Navigation will be handled by auth context
+          }}
           activeOpacity={0.7}
         >
           <Text style={[styles.logoutText, { color: colors.muted }]}>
