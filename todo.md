@@ -110,3 +110,11 @@
 ## Bug Fixes (Current)
 - [x] Fix logout button not working after registration
 
+
+## Musician Document Verification
+- [x] Add musician verification document schema to database
+- [x] Create backend routes for document upload and verification
+- [x] Create document upload UI for musicians
+- [x] Add admin panel to review and approve musician documents
+- [ ] Block listing publication until documents verified
+

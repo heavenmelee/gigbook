@@ -87,6 +87,13 @@ export default function MusicianTabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="documents"
+        options={{
+          title: "Dokumen",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

@@ -308,6 +308,38 @@ export const appRouter = router({
       if (!profile) return [];
       return db.getPaymentsByMusicianId(profile.id);
     }),
+
+    uploadDocument: protectedProcedure
+      .input(z.object({
+        documentType: z.enum(["id", "portfolio", "certificate"]),
+        documentUrl: z.string().url(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "musician") throw new Error("Unauthorized");
+        const profile = await db.getMusicianProfileByUserId(ctx.user.id);
+        if (!profile) throw new Error("Musician profile not found");
+        const documentId = await db.uploadMusicianDocument({
+          musicianId: profile.id,
+          documentType: input.documentType,
+          documentUrl: input.documentUrl,
+        });
+        await db.logActivity({ userId: ctx.user.id, action: "document_uploaded", entityType: "document", entityId: documentId });
+        return { success: true, documentId };
+      }),
+
+    getDocuments: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "musician") throw new Error("Unauthorized");
+      const profile = await db.getMusicianProfileByUserId(ctx.user.id);
+      if (!profile) return [];
+      return db.getMusicianDocuments(profile.id);
+    }),
+
+    isVerified: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "musician") throw new Error("Unauthorized");
+      const profile = await db.getMusicianProfileByUserId(ctx.user.id);
+      if (!profile) return false;
+      return db.isMusicianVerified(profile.id);
+    }),
   }),
 
   browse: router({
@@ -579,7 +611,32 @@ export const appRouter = router({
       if (ctx.user.role !== "admin") throw new Error("Unauthorized");
       return db.getRecentActivity();
     }),
+
+    getPendingVerificationDocuments: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new Error("Unauthorized");
+      return db.getPendingVerificationDocuments();
+    }),
+
+    approveMusicianDocument: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("Unauthorized");
+        await db.approveMusicianDocument(input.documentId, ctx.user.id);
+        await db.logActivity({ userId: ctx.user.id, action: "document_approved", entityType: "document", entityId: input.documentId });
+        return { success: true };
+      }),
+
+    rejectMusicianDocument: protectedProcedure
+      .input(z.object({ documentId: z.number(), reason: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("Unauthorized");
+        await db.rejectMusicianDocument(input.documentId, ctx.user.id, input.reason);
+        await db.logActivity({ userId: ctx.user.id, action: "document_rejected", entityType: "document", entityId: input.documentId });
+        return { success: true };
+      }),
   }),
+
+
 });
 
 export type AppRouter = typeof appRouter;

@@ -89,6 +89,13 @@ export default function AdminTabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="gear" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="documents"
+        options={{
+          title: "Dokumen",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

@@ -201,6 +201,25 @@ export type InsertSetting = typeof settings.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = typeof activityLogs.$inferInsert;
 
+export type MusicianVerificationDocument = typeof musicianVerificationDocuments.$inferSelect;
+export type InsertMusicianVerificationDocument = typeof musicianVerificationDocuments.$inferInsert;
+
+
+/**
+ * Musician Verification Documents - For musician identity verification
+ */
+export const musicianVerificationDocuments = mysqlTable("musician_verification_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  musicianId: int("musicianId").notNull(),
+  documentType: mysqlEnum("documentType", ["id", "portfolio", "certificate"]).notNull(),
+  documentUrl: text("documentUrl").notNull(),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  rejectionReason: text("rejectionReason"),
+  verifiedBy: int("verifiedBy"), // admin user id
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
 
 /**
  * Email Verification Tokens - For email verification during registration

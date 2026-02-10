@@ -12,6 +12,7 @@ import {
   settings,
   activityLogs,
   emailVerificationTokens,
+  musicianVerificationDocuments,
   InsertMusicianProfile,
   InsertListing,
   InsertAvailability,
@@ -20,6 +21,7 @@ import {
   InsertReview,
   InsertActivityLog,
   InsertEmailVerificationToken,
+  InsertMusicianVerificationDocument,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -715,4 +717,116 @@ export async function getUnverifiedEmailTokens(userId: number) {
         gt(emailVerificationTokens.expiresAt, new Date())
       )
     );
+}
+
+
+// ==================== MUSICIAN VERIFICATION DOCUMENTS ====================
+
+export async function uploadMusicianDocument(data: InsertMusicianVerificationDocument) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(musicianVerificationDocuments).values(data);
+  return result[0].insertId;
+}
+
+export async function getMusicianDocuments(musicianId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db
+    .select()
+    .from(musicianVerificationDocuments)
+    .where(eq(musicianVerificationDocuments.musicianId, musicianId))
+    .orderBy(desc(musicianVerificationDocuments.createdAt));
+}
+
+export async function getMusicianDocumentsByStatus(status: "pending" | "approved" | "rejected") {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db
+    .select()
+    .from(musicianVerificationDocuments)
+    .where(eq(musicianVerificationDocuments.status, status))
+    .orderBy(desc(musicianVerificationDocuments.createdAt));
+}
+
+export async function approveMusicianDocument(documentId: number, adminId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const doc = await db
+    .select()
+    .from(musicianVerificationDocuments)
+    .where(eq(musicianVerificationDocuments.id, documentId))
+    .limit(1);
+  
+  if (doc.length === 0) throw new Error("Document not found");
+  
+  await db
+    .update(musicianVerificationDocuments)
+    .set({
+      status: "approved",
+      verifiedBy: adminId,
+      verifiedAt: new Date(),
+    })
+    .where(eq(musicianVerificationDocuments.id, documentId));
+  
+  // Check if all required documents are approved
+  const musicianId = doc[0].musicianId;
+  const allDocs = await db
+    .select()
+    .from(musicianVerificationDocuments)
+    .where(eq(musicianVerificationDocuments.musicianId, musicianId));
+  
+  const requiredTypes: Array<"id" | "portfolio" | "certificate"> = ["id", "portfolio"];
+  const approvedDocs = allDocs.filter(d => d.status === "approved").map(d => d.documentType);
+  
+  if (requiredTypes.every(type => approvedDocs.includes(type))) {
+    // Mark musician as verified
+    await db
+      .update(musicianProfiles)
+      .set({ verified: true })
+      .where(eq(musicianProfiles.userId, musicianId));
+  }
+}
+
+export async function rejectMusicianDocument(documentId: number, adminId: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .update(musicianVerificationDocuments)
+    .set({
+      status: "rejected",
+      rejectionReason: reason,
+      verifiedBy: adminId,
+      verifiedAt: new Date(),
+    })
+    .where(eq(musicianVerificationDocuments.id, documentId));
+}
+
+export async function getPendingVerificationDocuments() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db
+    .select()
+    .from(musicianVerificationDocuments)
+    .where(eq(musicianVerificationDocuments.status, "pending"))
+    .orderBy(desc(musicianVerificationDocuments.createdAt));
+}
+
+export async function isMusicianVerified(musicianId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  const profile = await db
+    .select()
+    .from(musicianProfiles)
+    .where(eq(musicianProfiles.userId, musicianId))
+    .limit(1);
+  
+  return profile.length > 0 && profile[0].verified === true;
 }
