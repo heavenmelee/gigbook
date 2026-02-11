@@ -627,10 +627,10 @@ export const appRouter = router({
       }),
 
     rejectMusicianDocument: protectedProcedure
-      .input(z.object({ documentId: z.number(), reason: z.string() }))
+      .input(z.object({ documentId: z.number(), reason: z.string(), feedback: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") throw new Error("Unauthorized");
-        await db.rejectMusicianDocument(input.documentId, ctx.user.id, input.reason);
+        await db.rejectMusicianDocument(input.documentId, ctx.user.id, input.reason, input.feedback);
         await db.logActivity({ userId: ctx.user.id, action: "document_rejected", entityType: "document", entityId: input.documentId });
         return { success: true };
       }),

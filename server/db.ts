@@ -792,7 +792,7 @@ export async function approveMusicianDocument(documentId: number, adminId: numbe
   }
 }
 
-export async function rejectMusicianDocument(documentId: number, adminId: number, reason: string) {
+export async function rejectMusicianDocument(documentId: number, adminId: number, reason: string, feedback?: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -801,6 +801,7 @@ export async function rejectMusicianDocument(documentId: number, adminId: number
     .set({
       status: "rejected",
       rejectionReason: reason,
+      adminFeedback: feedback || reason, // use feedback if provided, otherwise use reason
       verifiedBy: adminId,
       verifiedAt: new Date(),
     })

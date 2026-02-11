@@ -1,0 +1,1 @@
+ALTER TABLE `musician_verification_documents` ADD `adminFeedback` text;

@@ -9,6 +9,7 @@ export default function AdminDocumentsScreen() {
   const { user } = useAuth();
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [adminFeedback, setAdminFeedback] = useState("");
   const [processing, setProcessing] = useState(false);
 
   const { data: documents, isLoading, refetch } = trpc.admin.getPendingVerificationDocuments.useQuery();
@@ -37,11 +38,12 @@ export default function AdminDocumentsScreen() {
 
     setProcessing(true);
     try {
-      await rejectMutation.mutateAsync({ documentId, reason: rejectionReason });
-      Alert.alert("Berjaya", "Dokumen telah ditolak");
+      await rejectMutation.mutateAsync({ documentId, reason: rejectionReason, feedback: adminFeedback || undefined });
+      Alert.alert("Berjaya", "Dokumen telah ditolak dengan feedback");
       refetch();
       setSelectedDocId(null);
       setRejectionReason("");
+      setAdminFeedback("");
     } catch (error) {
       Alert.alert("Ralat", error instanceof Error ? error.message : "Gagal menolak dokumen");
     } finally {
@@ -122,13 +124,24 @@ export default function AdminDocumentsScreen() {
                     <View className="gap-2">
                       {/* Rejection Reason Input */}
                       <View className="bg-error/10 rounded p-3 mb-2">
-                        <Text className="text-xs font-semibold text-error mb-2">Sebab Penolakan (jika ditolak)</Text>
+                        <Text className="text-xs font-semibold text-error mb-2">Sebab Penolakan *</Text>
                         <TextInput
-                          className="text-sm text-foreground p-2 bg-surface rounded border border-border"
-                          placeholder="Masukkan sebab penolakan..."
+                          className="text-sm text-foreground p-2 bg-surface rounded border border-border mb-2"
+                          placeholder="Contoh: Gambar tidak jelas, dokumen kadaluarsa"
                           placeholderTextColor="#999"
                           value={rejectionReason}
                           onChangeText={setRejectionReason}
+                          multiline
+                          numberOfLines={2}
+                        />
+                        
+                        <Text className="text-xs font-semibold text-error mb-2">Feedback Terperinci (Pilihan)</Text>
+                        <TextInput
+                          className="text-sm text-foreground p-2 bg-surface rounded border border-border"
+                          placeholder="Berikan panduan terperinci untuk pemuzik memperbaiki dokumen..."
+                          placeholderTextColor="#999"
+                          value={adminFeedback}
+                          onChangeText={setAdminFeedback}
                           multiline
                           numberOfLines={3}
                         />

@@ -118,3 +118,10 @@
 - [x] Add admin panel to review and approve musician documents
 - [ ] Block listing publication until documents verified
 
+
+## Admin Document Feedback
+- [x] Add feedback field to document rejection
+- [x] Update admin UI to include feedback textarea
+- [x] Display feedback to musicians on rejected documents
+- [ ] Allow admin to edit feedback after rejection
+

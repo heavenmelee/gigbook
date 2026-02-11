@@ -215,6 +215,7 @@ export const musicianVerificationDocuments = mysqlTable("musician_verification_d
   documentUrl: text("documentUrl").notNull(),
   status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
   rejectionReason: text("rejectionReason"),
+  adminFeedback: text("adminFeedback"), // detailed feedback from admin
   verifiedBy: int("verifiedBy"), // admin user id
   verifiedAt: timestamp("verifiedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
