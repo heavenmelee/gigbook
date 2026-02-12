@@ -16,9 +16,15 @@ export default function MusicianProfileScreen() {
 
   const handleLogout = async () => {
     try {
+      console.log("[Musician Profile] handleLogout called");
       await logout();
-      router.replace("/welcome");
+      console.log("[Musician Profile] logout completed, navigating to welcome");
+      // Use a small delay to ensure state updates are processed
+      setTimeout(() => {
+        router.replace("/welcome");
+      }, 100);
     } catch (error: any) {
+      console.error("[Musician Profile] logout error:", error);
       Alert.alert("Ralat", error.message || "Gagal log keluar");
     }
   };

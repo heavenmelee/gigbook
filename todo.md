@@ -125,3 +125,7 @@
 - [x] Display feedback to musicians on rejected documents
 - [ ] Allow admin to edit feedback after rejection
 
+
+## Bug Fixes (Current Session)
+- [x] Fix logout button not working after musician registration
+
