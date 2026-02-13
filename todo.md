@@ -144,3 +144,7 @@
 ## Bug Fixes (Current Session 2)
 - [x] Fix musician document upload - add file picker and upload functionality
 
+
+## UI Improvements
+- [x] Improve musician listings screen layout and form display
+

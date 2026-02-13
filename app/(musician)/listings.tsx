@@ -1,4 +1,4 @@
-import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, RefreshControl } from "react-native";
+import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, RefreshControl, KeyboardAvoidingView, Platform } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -154,82 +154,128 @@ export default function MusicianListingsScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={showModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showModal} animationType="slide" transparent onRequestClose={() => setShowModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              {editingListing ? "Edit Listing" : "Listing Baru"}
-            </Text>
-
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
-              placeholder="Tajuk"
-              placeholderTextColor={colors.muted}
-              value={formData.title}
-              onChangeText={(text) => setFormData({ ...formData, title: text })}
-            />
-
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
-              placeholder="Penerangan"
-              placeholderTextColor={colors.muted}
-              value={formData.description}
-              onChangeText={(text) => setFormData({ ...formData, description: text })}
-              multiline
-              numberOfLines={3}
-            />
-
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
-              placeholder="Kategori (cth: Solo, Band, DJ)"
-              placeholderTextColor={colors.muted}
-              value={formData.category}
-              onChangeText={(text) => setFormData({ ...formData, category: text })}
-            />
-
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
-              placeholder="Harga (RM)"
-              placeholderTextColor={colors.muted}
-              value={formData.price}
-              onChangeText={(text) => setFormData({ ...formData, price: text })}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.priceTypeContainer}>
-              {(["per_hour", "per_event", "per_day"] as const).map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.priceTypeButton,
-                    { borderColor: colors.border },
-                    formData.priceType === type && { backgroundColor: colors.primary, borderColor: colors.primary },
-                  ]}
-                  onPress={() => setFormData({ ...formData, priceType: type })}
-                >
-                  <Text style={{ color: formData.priceType === type ? "#fff" : colors.foreground }}>
-                    {priceTypeLabels[type]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                {editingListing ? "Edit Listing" : "Listing Baru"}
+              </Text>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={colors.muted} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.modalActions}>
+            {/* Scrollable Form Content */}
+            <ScrollView contentContainerStyle={styles.formScroll} showsVerticalScrollIndicator={true}>
+              {/* Title Field */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Tajuk Perkhidmatan *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  placeholder="Contoh: Pertunjukan Piano Klasik"
+                  placeholderTextColor={colors.muted}
+                  value={formData.title}
+                  onChangeText={(text) => setFormData({ ...formData, title: text })}
+                />
+              </View>
+
+              {/* Description Field */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Penerangan *</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  placeholder="Terangkan perkhidmatan anda, pengalaman, dan apa yang anda tawarkan..."
+                  placeholderTextColor={colors.muted}
+                  value={formData.description}
+                  onChangeText={(text) => setFormData({ ...formData, description: text })}
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+
+              {/* Category Field */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Kategori *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  placeholder="Contoh: Solo, Band, DJ, Orkestra"
+                  placeholderTextColor={colors.muted}
+                  value={formData.category}
+                  onChangeText={(text) => setFormData({ ...formData, category: text })}
+                />
+              </View>
+
+              {/* Price Field */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Harga (RM) *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  placeholder="Contoh: 500"
+                  placeholderTextColor={colors.muted}
+                  value={formData.price}
+                  onChangeText={(text) => setFormData({ ...formData, price: text })}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              {/* Price Type Selection */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Jenis Harga *</Text>
+                <View style={styles.priceTypeContainer}>
+                  {(["per_hour", "per_event", "per_day"] as const).map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.priceTypeButton,
+                        { borderColor: colors.border },
+                        formData.priceType === type && { backgroundColor: colors.primary, borderColor: colors.primary },
+                      ]}
+                      onPress={() => setFormData({ ...formData, priceType: type })}
+                    >
+                      <Text style={{ color: formData.priceType === type ? "#fff" : colors.foreground, fontWeight: "600" }}>
+                        {priceTypeLabels[type]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Duration Field */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Durasi (minit)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  placeholder="Contoh: 60"
+                  placeholderTextColor={colors.muted}
+                  value={formData.duration}
+                  onChangeText={(text) => setFormData({ ...formData, duration: text })}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              {/* Extra spacing for scrolling */}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            {/* Modal Actions - Fixed at bottom */}
+            <View style={[styles.modalActions, { borderTopColor: colors.border }]}>
               <TouchableOpacity
                 style={[styles.modalButton, { borderColor: colors.border }]}
                 onPress={() => setShowModal(false)}
               >
-                <Text style={{ color: colors.muted }}>Batal</Text>
+                <Text style={{ color: colors.muted, fontWeight: "600" }}>Batal</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
               >
-                <Text style={{ color: "#fff" }}>Simpan</Text>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>Simpan</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );
@@ -254,13 +300,23 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: "center", paddingVertical: 60 },
   emptyIcon: { fontSize: 60, marginBottom: 16 },
   emptyText: { fontSize: 16, textAlign: "center" },
+  
+  // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalContent: { padding: 24, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
-  input: { padding: 14, borderRadius: 8, borderWidth: 1, marginBottom: 12, fontSize: 16 },
-  textArea: { height: 80, textAlignVertical: "top" },
-  priceTypeContainer: { flexDirection: "row", gap: 8, marginBottom: 20 },
+  modalContent: { maxHeight: "90%", borderTopLeftRadius: 20, borderTopRightRadius: 20, display: "flex", flexDirection: "column" },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  modalTitle: { fontSize: 20, fontWeight: "bold" },
+  
+  // Form Styles
+  formScroll: { paddingHorizontal: 20, paddingVertical: 12 },
+  fieldGroup: { marginBottom: 16 },
+  fieldLabel: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
+  input: { padding: 14, borderRadius: 8, borderWidth: 1, fontSize: 16 },
+  textArea: { height: 100, textAlignVertical: "top" },
+  priceTypeContainer: { flexDirection: "row", gap: 8 },
   priceTypeButton: { flex: 1, padding: 12, borderRadius: 8, borderWidth: 1, alignItems: "center" },
-  modalActions: { flexDirection: "row", gap: 12 },
+  
+  // Modal Actions
+  modalActions: { flexDirection: "row", gap: 12, paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1 },
   modalButton: { flex: 1, padding: 14, borderRadius: 8, alignItems: "center", borderWidth: 1 },
 });
