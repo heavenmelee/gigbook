@@ -140,3 +140,7 @@
 - [ ] Setup webhook handlers for payment status updates
 - [ ] Implement automated payout system
 
+
+## Bug Fixes (Current Session 2)
+- [x] Fix musician document upload - add file picker and upload functionality
+

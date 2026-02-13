@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
 
 export default function MusicianDocumentsScreen() {
   const { user } = useAuth();
@@ -21,14 +23,31 @@ export default function MusicianDocumentsScreen() {
   ];
 
   const handleUpload = async (type: "id" | "portfolio" | "certificate") => {
-    // Simulated document URL - in production, use image picker and upload to S3
-    const mockUrl = `https://example.com/document-${type}-${Date.now()}.pdf`;
-    
-    setUploading(true);
     try {
+      // Open document picker
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "image/*"],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      if (!file) return;
+
+      setUploading(true);
+
+      // Read file as base64
+      const base64 = await FileSystem.readAsStringAsync(file.uri, {
+        encoding: "base64",
+      });
+
+      // For now, use base64 as document URL (in production, upload to S3)
+      const documentUrl = `data:${file.mimeType};base64,${base64}`;
+
       await uploadMutation.mutateAsync({
         documentType: type,
-        documentUrl: mockUrl,
+        documentUrl: documentUrl,
       });
       Alert.alert("Berjaya", "Dokumen telah dimuat naik untuk disahkan");
       refetch();
