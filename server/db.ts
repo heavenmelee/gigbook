@@ -13,6 +13,9 @@ import {
   activityLogs,
   emailVerificationTokens,
   musicianVerificationDocuments,
+  xenditInvoices,
+  xenditPayouts,
+  musicianBankAccounts,
   InsertMusicianProfile,
   InsertListing,
   InsertAvailability,
@@ -22,6 +25,9 @@ import {
   InsertActivityLog,
   InsertEmailVerificationToken,
   InsertMusicianVerificationDocument,
+  InsertXenditInvoice,
+  InsertXenditPayout,
+  InsertMusicianBankAccount,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -830,4 +836,132 @@ export async function isMusicianVerified(musicianId: number): Promise<boolean> {
     .limit(1);
   
   return profile.length > 0 && profile[0].verified === true;
+}
+
+
+// ============================================================================
+// PAYMENT & XENDIT FUNCTIONS
+// ============================================================================
+
+export async function createXenditInvoice(data: InsertXenditInvoice) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return db.insert(xenditInvoices).values(data);
+}
+
+export async function getXenditInvoice(xenditInvoiceId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return db
+    .select()
+    .from(xenditInvoices)
+    .where(eq(xenditInvoices.xenditInvoiceId, xenditInvoiceId))
+    .limit(1);
+}
+
+export async function updateXenditInvoiceStatus(xenditInvoiceId: string, status: string, paidAt?: Date) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(xenditInvoices)
+    .set({
+      status: status as any,
+      paidAt: paidAt || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(xenditInvoices.xenditInvoiceId, xenditInvoiceId));
+}
+
+export async function createXenditPayout(data: InsertXenditPayout) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return db.insert(xenditPayouts).values(data);
+}
+
+export async function getXenditPayout(xenditPayoutId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return db
+    .select()
+    .from(xenditPayouts)
+    .where(eq(xenditPayouts.xenditPayoutId, xenditPayoutId))
+    .limit(1);
+}
+
+export async function updateXenditPayoutStatus(xenditPayoutId: string, status: string, completedAt?: Date) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(xenditPayouts)
+    .set({
+      status: status as any,
+      completedAt: completedAt || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(xenditPayouts.xenditPayoutId, xenditPayoutId));
+}
+
+export async function saveMusicianBankAccount(data: InsertMusicianBankAccount) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Check if account already exists for this musician
+  const existing = await db
+    .select()
+    .from(musicianBankAccounts)
+    .where(eq(musicianBankAccounts.musicianId, data.musicianId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update existing
+    return db
+      .update(musicianBankAccounts)
+      .set(data)
+      .where(eq(musicianBankAccounts.musicianId, data.musicianId));
+  } else {
+    // Insert new
+    return db.insert(musicianBankAccounts).values(data);
+  }
+}
+
+export async function getMusicianBankAccount(musicianId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return db
+    .select()
+    .from(musicianBankAccounts)
+    .where(eq(musicianBankAccounts.musicianId, musicianId))
+    .limit(1);
+}
+
+
+
+export async function getPendingPayouts() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(xenditPayouts)
+    .where(eq(xenditPayouts.status, "PENDING"))
+    .orderBy(xenditPayouts.createdAt);
+}
+
+export async function getCompletedPayouts(limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(xenditPayouts)
+    .where(eq(xenditPayouts.status, "COMPLETED"))
+    .orderBy(desc(xenditPayouts.completedAt))
+    .limit(limit);
 }

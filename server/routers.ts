@@ -636,6 +636,91 @@ export const appRouter = router({
       }),
   }),
 
+  payment: router({
+    // Save musician bank account for payouts
+    saveBankAccount: protectedProcedure
+      .input(z.object({
+        bankCode: z.string(),
+        accountNumber: z.string(),
+        accountHolderName: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "musician") throw new Error("Unauthorized");
+        await db.saveMusicianBankAccount({
+          musicianId: ctx.user.id,
+          bankCode: input.bankCode,
+          bankAccountNumber: input.accountNumber,
+          bankAccountHolder: input.accountHolderName,
+        });
+        return { success: true };
+      }),
+
+    // Get musician bank account
+    getBankAccount: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== "musician") throw new Error("Unauthorized");
+        const account = await db.getMusicianBankAccount(ctx.user.id);
+        return account?.[0] || null;
+      }),
+
+    // Create payment invoice for booking
+    createBookingInvoice: protectedProcedure
+      .input(z.object({
+        bookingId: z.number(),
+        amount: z.number(),
+        commissionPercentage: z.number(),
+        description: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "user") throw new Error("Unauthorized");
+        
+        const { createInvoice } = await import("./services/xendit");
+        const invoiceResult = await createInvoice({
+          bookingId: input.bookingId,
+          userId: ctx.user.id,
+          musicianId: 0, // Will be set from booking
+          amount: input.amount,
+          commissionPercentage: input.commissionPercentage,
+          description: input.description,
+        });
+
+        // Save to database
+        await db.createXenditInvoice({
+          bookingId: input.bookingId,
+          xenditInvoiceId: invoiceResult.xenditInvoiceId,
+          status: "PENDING",
+          amount: String(input.amount),
+          commissionAmount: String(invoiceResult.commissionAmount),
+          musicianPayoutAmount: String(invoiceResult.musicianPayoutAmount),
+          expiresAt: invoiceResult.expiresAt,
+        });
+
+        return invoiceResult;
+      }),
+
+    // Get payment status
+    getPaymentStatus: protectedProcedure
+      .input(z.object({ bookingId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const payment = await db.getPaymentByBookingId(input.bookingId);
+        if (!payment) return null;
+        return payment;
+      }),
+
+    // Admin: Get all pending payouts
+    getPendingPayouts: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") throw new Error("Unauthorized");
+        return db.getPendingPayouts();
+      }),
+
+    // Admin: Get completed payouts
+    getCompletedPayouts: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") throw new Error("Unauthorized");
+        return db.getCompletedPayouts();
+      }),
+  }),
 
 });
 

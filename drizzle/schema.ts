@@ -238,3 +238,63 @@ export const emailVerificationTokens = mysqlTable("email_verification_tokens", {
 
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
+
+
+/**
+ * Xendit Invoices - For tracking payment invoices
+ */
+export const xenditInvoices = mysqlTable("xendit_invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  bookingId: int("bookingId").notNull(),
+  xenditInvoiceId: varchar("xenditInvoiceId", { length: 255 }).notNull().unique(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  commissionAmount: decimal("commissionAmount", { precision: 12, scale: 2 }).notNull(),
+  musicianPayoutAmount: decimal("musicianPayoutAmount", { precision: 12, scale: 2 }).notNull(),
+  status: mysqlEnum("status", ["PENDING", "PAID", "EXPIRED", "FAILED"]).default("PENDING").notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 50 }), // FPX, CARD, EWALLET, etc
+  invoiceUrl: text("invoiceUrl"),
+  paidAt: timestamp("paidAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Xendit Payouts - For tracking musician payouts
+ */
+export const xenditPayouts = mysqlTable("xendit_payouts", {
+  id: int("id").autoincrement().primaryKey(),
+  musicianId: int("musicianId").notNull(),
+  xenditPayoutId: varchar("xenditPayoutId", { length: 255 }).notNull().unique(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  status: mysqlEnum("status", ["PENDING", "PROCESSING", "COMPLETED", "FAILED"]).default("PENDING").notNull(),
+  bankCode: varchar("bankCode", { length: 50 }),
+  bankAccountNumber: varchar("bankAccountNumber", { length: 50 }),
+  bankAccountHolder: varchar("bankAccountHolder", { length: 255 }),
+  failureCode: varchar("failureCode", { length: 100 }),
+  failureMessage: text("failureMessage"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Musician Bank Accounts - For storing musician payout bank details
+ */
+export const musicianBankAccounts = mysqlTable("musician_bank_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  musicianId: int("musicianId").notNull().unique(),
+  bankCode: varchar("bankCode", { length: 50 }).notNull(),
+  bankAccountNumber: varchar("bankAccountNumber", { length: 50 }).notNull(),
+  bankAccountHolder: varchar("bankAccountHolder", { length: 255 }).notNull(),
+  isVerified: boolean("isVerified").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type XenditInvoice = typeof xenditInvoices.$inferSelect;
+export type InsertXenditInvoice = typeof xenditInvoices.$inferInsert;
+export type XenditPayout = typeof xenditPayouts.$inferSelect;
+export type InsertXenditPayout = typeof xenditPayouts.$inferInsert;
+export type MusicianBankAccount = typeof musicianBankAccounts.$inferSelect;
+export type InsertMusicianBankAccount = typeof musicianBankAccounts.$inferInsert;
