@@ -42,9 +42,9 @@ export default function UserHomeScreen() {
         {upcomingBookings && upcomingBookings.filter((b: any) => b.status === "confirmed").length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Tempahan Akan Datang</Text>
-            {upcomingBookings.filter((b: any) => b.status === "confirmed").slice(0, 2).map((booking: any) => (
+            {upcomingBookings.filter((b: any) => b.status === "confirmed").slice(0, 2).map((booking: any, index: number) => (
               <TouchableOpacity
-                key={booking.id}
+                key={booking.id ? `booking-${booking.id}` : `upcoming-${index}`}
                 style={[styles.bookingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => router.push("/bookings" as any)}
               >
@@ -76,9 +76,9 @@ export default function UserHomeScreen() {
           {featuredMusicians && featuredMusicians.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.musicianList}>
-                {featuredMusicians.map((musician: any) => (
+                {featuredMusicians.map((musician: any, index: number) => (
                   <TouchableOpacity
-                    key={musician.id}
+                    key={musician.id ? `musician-${musician.id}` : `featured-${index}`}
                     style={[styles.musicianCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                     onPress={() => router.push(`/musician/${musician.id}` as any)}
                   >
