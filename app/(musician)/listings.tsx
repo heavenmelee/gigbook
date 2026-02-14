@@ -5,15 +5,44 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
+// Music categories
+const MUSIC_CATEGORIES = [
+  "Solo",
+  "Band",
+  "DJ",
+  "Orkestra",
+  "Vokal",
+  "Instrumen Tradisional",
+  "Instrumen Barat",
+  "Lain-lain",
+];
+
+// Music genres
+const MUSIC_GENRES = [
+  "Pop",
+  "Rock",
+  "Jazz",
+  "Klasik",
+  "R&B",
+  "Hip Hop",
+  "Dangdut",
+  "Melayu",
+  "Tradisional",
+  "Lain-lain",
+];
+
 export default function MusicianListingsScreen() {
   const colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showGenrePicker, setShowGenrePicker] = useState(false);
   const [editingListing, setEditingListing] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
+    genre: "",
     price: "",
     priceType: "per_event" as "per_hour" | "per_event" | "per_day",
     duration: "",
@@ -37,13 +66,14 @@ export default function MusicianListingsScreen() {
         title: listing.title,
         description: listing.description || "",
         category: listing.category || "",
+        genre: listing.genre || "",
         price: listing.price,
         priceType: listing.priceType,
         duration: listing.duration?.toString() || "",
       });
     } else {
       setEditingListing(null);
-      setFormData({ title: "", description: "", category: "", price: "", priceType: "per_event", duration: "" });
+      setFormData({ title: "", description: "", category: "", genre: "", price: "", priceType: "per_event", duration: "" });
     }
     setShowModal(true);
   };
@@ -195,16 +225,98 @@ export default function MusicianListingsScreen() {
                 />
               </View>
 
-              {/* Category Field */}
+              {/* Category Dropdown */}
               <View style={styles.fieldGroup}>
                 <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Kategori *</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
-                  placeholder="Contoh: Solo, Band, DJ, Orkestra"
-                  placeholderTextColor={colors.muted}
-                  value={formData.category}
-                  onChangeText={(text) => setFormData({ ...formData, category: text })}
-                />
+                <TouchableOpacity
+                  style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+                >
+                  <Text style={[styles.dropdownButtonText, { color: formData.category ? colors.foreground : colors.muted }]}>
+                    {formData.category || "Pilih kategori"}
+                  </Text>
+                  <IconSymbol
+                    name={showCategoryPicker ? "chevron.up" : "chevron.down"}
+                    size={20}
+                    color={colors.muted}
+                  />
+                </TouchableOpacity>
+                {showCategoryPicker && (
+                  <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    {MUSIC_CATEGORIES.map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[
+                          styles.pickerItem,
+                          formData.category === cat && { backgroundColor: colors.primary + "20" },
+                        ]}
+                        onPress={() => {
+                          setFormData({ ...formData, category: cat });
+                          setShowCategoryPicker(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            { color: formData.category === cat ? colors.primary : colors.foreground },
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                        {formData.category === cat && (
+                          <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Genre Dropdown */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Genre *</Text>
+                <TouchableOpacity
+                  style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => setShowGenrePicker(!showGenrePicker)}
+                >
+                  <Text style={[styles.dropdownButtonText, { color: formData.genre ? colors.foreground : colors.muted }]}>
+                    {formData.genre || "Pilih genre"}
+                  </Text>
+                  <IconSymbol
+                    name={showGenrePicker ? "chevron.up" : "chevron.down"}
+                    size={20}
+                    color={colors.muted}
+                  />
+                </TouchableOpacity>
+                {showGenrePicker && (
+                  <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    {MUSIC_GENRES.map((genre) => (
+                      <TouchableOpacity
+                        key={genre}
+                        style={[
+                          styles.pickerItem,
+                          formData.genre === genre && { backgroundColor: colors.primary + "20" },
+                        ]}
+                        onPress={() => {
+                          setFormData({ ...formData, genre: genre });
+                          setShowGenrePicker(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            { color: formData.genre === genre ? colors.primary : colors.foreground },
+                          ]}
+                        >
+                          {genre}
+                        </Text>
+                        {formData.genre === genre && (
+                          <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {/* Price Field */}
@@ -281,6 +393,12 @@ export default function MusicianListingsScreen() {
   );
 }
 
+const priceTypeLabels = {
+  per_hour: "Sejam",
+  per_event: "Per Event",
+  per_day: "Sehari",
+};
+
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 24 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
@@ -300,22 +418,30 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: "center", paddingVertical: 60 },
   emptyIcon: { fontSize: 60, marginBottom: 16 },
   emptyText: { fontSize: 16, textAlign: "center" },
-  
+
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   modalContent: { maxHeight: "90%", borderTopLeftRadius: 20, borderTopRightRadius: 20, display: "flex", flexDirection: "column" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   modalTitle: { fontSize: 20, fontWeight: "bold" },
-  
+
   // Form Styles
   formScroll: { paddingHorizontal: 20, paddingVertical: 12 },
   fieldGroup: { marginBottom: 16 },
   fieldLabel: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
   input: { padding: 14, borderRadius: 8, borderWidth: 1, fontSize: 16 },
   textArea: { height: 100, textAlignVertical: "top" },
+
+  // Dropdown Styles
+  dropdownButton: { padding: 14, borderRadius: 8, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dropdownButtonText: { fontSize: 16, fontWeight: "500" },
+  pickerContainer: { borderWidth: 1, borderRadius: 8, marginTop: 8, maxHeight: 200 },
+  pickerItem: { padding: 12, borderBottomWidth: 0.5, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  pickerItemText: { fontSize: 15, fontWeight: "500" },
+
   priceTypeContainer: { flexDirection: "row", gap: 8 },
   priceTypeButton: { flex: 1, padding: 12, borderRadius: 8, borderWidth: 1, alignItems: "center" },
-  
+
   // Modal Actions
   modalActions: { flexDirection: "row", gap: 12, paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1 },
   modalButton: { flex: 1, padding: 14, borderRadius: 8, alignItems: "center", borderWidth: 1 },

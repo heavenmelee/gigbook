@@ -152,3 +152,6 @@
 ## Bug Fixes (Current Session 3)
 - [x] Fix React key warning in featured musicians list
 
+## UI Improvements (Current Session 4)
+- [x] Improve musician listings form with dropdown selectors for category and other suitable fields
+
