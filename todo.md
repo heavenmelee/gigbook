@@ -178,6 +178,14 @@
 - [x] Earnings summary card (gross, monthly, escrow, total gigs)
 - [x] Enhanced getMusicianStats API with comprehensive data
 
+## Calendar Screen Implementation (Current Session 15)
+- [x] Build Calendar UI with month selector and Auto-buffer toggle
+- [x] Implement weekly strip with day tiles and dot indicators
+- [x] Build week view with time blocks (Booked/Hold/Blocked)
+- [x] Add floating "Block time" CTA button
+- [x] Implement Block time bottom sheet (date/time picker, reason chips, Save)
+- [x] Add tap handlers for viewing job/hold/block details
+
 ## Jobs Screen Implementation (Current Session 14)
 - [x] Build Jobs screen structure with segmented tabs (Requests, Confirmed, Past)
 - [x] Add search bar and filter chips
