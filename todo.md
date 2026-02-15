@@ -314,3 +314,11 @@
 - [x] Build Messages tab (chat threads, chat screen, quick replies)
 - [x] Build Profile tab (account info, addresses, payment methods, favorites, settings)
 - [x] Test all customer dashboard features end-to-end
+
+## Email Verification & Post-Signup Routing (Session 24)
+- [x] Add email verification screen after signup
+- [x] Implement email verification logic (OTP/verification link)
+- [x] Update signup flow to require email verification
+- [x] Redirect users directly to dashboard after verification (customer or musician based on role)
+- [x] Add email verification resend functionality
+- [x] Test email verification end-to-end

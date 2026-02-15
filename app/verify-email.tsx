@@ -6,6 +6,8 @@ import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import { useAuthContext } from "@/lib/auth-context";
 import { useAuth } from "@/hooks/use-auth";
+import * as Haptics from "expo-haptics";
+import { Platform } from "react-native";
 
 export default function VerifyEmailScreen() {
   const colors = useColors();
@@ -47,13 +49,20 @@ export default function VerifyEmailScreen() {
 
     setLoading(true);
     try {
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
       await verifyEmailMutation.mutateAsync({ code });
-      Alert.alert("Berjaya", "Email anda telah disahkan!");
-      // Check user status - if pending, go to pending-approval, else go to dashboard
+      // Check user status - if pending, go to pending-approval, else go to appropriate dashboard
       if (user?.status === "pending") {
         router.replace("/pending-approval");
       } else {
-        router.replace("/(tabs)");
+        // Route to appropriate dashboard based on user role
+        if (user?.role === "musician") {
+          router.replace("/(musician)");
+        } else {
+          router.replace("/(customer)");
+        }
       }
     } catch (error: any) {
       Alert.alert("Ralat", error.message || "Kod tidak sah");
@@ -65,6 +74,9 @@ export default function VerifyEmailScreen() {
   const handleResend = async () => {
     setResendLoading(true);
     try {
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
       await sendVerificationMutation.mutateAsync();
       setResendTimer(60);
       Alert.alert("Berjaya", "Kod verifikasi baru telah dihantar ke email anda");
