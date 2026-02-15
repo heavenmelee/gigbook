@@ -165,3 +165,6 @@
 - [x] Fix overlapping text in form (picker items overlapping with field labels below)
 - [x] Replace inline pickers with separate modal pickers to fully resolve overlap issue
 
+## Bug Fixes (Current Session 7)
+- [x] Fix musician cannot delete listing (changed soft-delete to hard-delete, added missing icons, added confirmation dialog)
+

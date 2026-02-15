@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, like, lte, or, sql, gt, isNull, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gte, like, lte, or, sql, gt, isNull, isNotNull, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -316,7 +316,19 @@ export async function updateListing(id: number, data: Partial<InsertListing>) {
 export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(listings).set({ isActive: false }).where(eq(listings.id, id));
+  // Check if there are active bookings referencing this listing
+  const activeBookings = await db.select().from(bookings).where(
+    and(
+      eq(bookings.listingId, id),
+      notInArray(bookings.status, ["completed", "cancelled_user", "cancelled_musician", "rejected"] as any)
+    )
+  );
+  if (activeBookings.length > 0) {
+    throw new Error("Tidak boleh padam listing yang mempunyai booking aktif");
+  }
+  // Delete related completed/cancelled bookings first, then delete listing
+  await db.delete(bookings).where(eq(bookings.listingId, id));
+  await db.delete(listings).where(eq(listings.id, id));
 }
 
 // ==================== AVAILABILITY QUERIES ====================

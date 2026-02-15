@@ -1,4 +1,4 @@
-import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, RefreshControl, KeyboardAvoidingView, Platform, FlatList } from "react-native";
+import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, RefreshControl, KeyboardAvoidingView, Platform, FlatList, Alert } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -222,11 +222,28 @@ export default function MusicianListingsScreen() {
   };
 
   const handleDelete = async (id: number) => {
-    try {
-      await deleteMutation.mutateAsync({ id });
-      refetch();
-    } catch (error) {
-      console.error("Failed to delete listing:", error);
+    const doDelete = async () => {
+      try {
+        await deleteMutation.mutateAsync({ id });
+        refetch();
+      } catch (error) {
+        console.error("Failed to delete listing:", error);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm("Adakah anda pasti mahu padam listing ini?")) {
+        await doDelete();
+      }
+    } else {
+      Alert.alert(
+        "Padam Listing",
+        "Adakah anda pasti mahu padam listing ini? Tindakan ini tidak boleh dibatalkan.",
+        [
+          { text: "Batal", style: "cancel" },
+          { text: "Padam", style: "destructive", onPress: doDelete },
+        ]
+      );
     }
   };
 
