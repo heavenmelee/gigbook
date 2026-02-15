@@ -1,0 +1,18 @@
+{
+  "query": "SELECT u.id, u.name, u.email, u.role, u.status, mp.stageName \nFROM users u \nLEFT JOIN musician_profiles mp ON u.id = mp.userId \nWHERE u.role = 'musician';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2ynB7yCcC8fFwgA.9590bf5cc734 --database 5F6XpZZSSf9Qr8ZPCE2Hax --execute SELECT u.id, u.name, u.email, u.role, u.status, mp.stageName \nFROM users u \nLEFT JOIN musician_profiles mp ON u.id = mp.userId \nWHERE u.role = 'musician';",
+  "rows": [
+    {
+      "id": "360016",
+      "name": "rani",
+      "email": "rani6192024@gmail.com",
+      "role": "musician",
+      "status": "approved",
+      "stageName": "rani"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\tstatus\tstageName\n360016\trani\trani6192024@gmail.com\tmusician\tapproved\trani\n",
+  "stderr": "",
+  "execution_time_ms": 1535
+}

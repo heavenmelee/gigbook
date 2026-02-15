@@ -1,0 +1,17 @@
+{
+  "query": "SELECT u.status, mp.stageName, mp.verified, mp.genre, mp.rating \nFROM musician_profiles mp\nINNER JOIN users u ON mp.userId = u.id\nWHERE mp.stageName LIKE '%rani%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2ynB7yCcC8fFwgA.9590bf5cc734 --database 5F6XpZZSSf9Qr8ZPCE2Hax --execute SELECT u.status, mp.stageName, mp.verified, mp.genre, mp.rating \nFROM musician_profiles mp\nINNER JOIN users u ON mp.userId = u.id\nWHERE mp.stageName LIKE '%rani%';",
+  "rows": [
+    {
+      "status": "approved",
+      "stageName": "rani",
+      "verified": "1",
+      "genre": "NULL",
+      "rating": "0.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "status\tstageName\tverified\tgenre\trating\napproved\trani\t1\tNULL\t0.00\n",
+  "stderr": "",
+  "execution_time_ms": 1516
+}

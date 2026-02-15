@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, userId, stageName, verified FROM musician_profiles LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2ynB7yCcC8fFwgA.9590bf5cc734 --database 5F6XpZZSSf9Qr8ZPCE2Hax --execute SELECT id, userId, stageName, verified FROM musician_profiles LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "userId": "360016",
+      "stageName": "rani",
+      "verified": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tstageName\tverified\n1\t360016\trani\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1599
+}
