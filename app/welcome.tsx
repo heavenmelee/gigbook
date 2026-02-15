@@ -56,7 +56,16 @@ export default function WelcomeScreen() {
           lastSignedIn: new Date(),
         });
         await refetch();
-        router.replace("/(tabs)");
+        // Route based on user role
+        if (result.user.role === "musician") {
+          router.replace("/(musician)");
+        } else if (result.user.role === "user") {
+          router.replace("/(customer)");
+        } else if (result.user.role === "admin") {
+          router.replace("/(admin)");
+        } else {
+          router.replace("/(tabs)");
+        }
       }
     } catch (error: any) {
       Alert.alert("Login Gagal", error.message || "Sila cuba lagi");

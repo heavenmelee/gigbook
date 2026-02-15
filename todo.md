@@ -360,3 +360,10 @@
 - [x] Check if users are being redirected to old/wrong dashboard
 - [x] Fix routing and navigation issues (added (customer) route to root _layout.tsx)
 - [x] Test customer dashboard is visible after login
+
+## Customer Routing Bug - Still Showing Old Dashboard (Session 30)
+- [x] Check welcome.tsx login routing
+- [x] Check verify-email.tsx routing after verification (already correct)
+- [x] Check if (tabs) is being used instead of (customer) for regular users (YES - found in welcome.tsx line 59)
+- [x] Fix all routing to use (customer) for customer role (fixed welcome.tsx to route based on user.role)
+- [x] Test customer sees new dashboard after login
