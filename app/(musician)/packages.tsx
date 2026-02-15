@@ -240,7 +240,7 @@ export default function PackagesScreen() {
     setFormData({ ...formData, addOns: formData.addOns.filter((_, i) => i !== index) });
   };
 
-  const EVENT_TYPES = ["Wedding", "Corporate", "Birthday", "Engagement", "Festival", "Private Event", "Lain-lain"];
+  const EVENT_TYPES = ["Perkahwinan", "Korporat", "Hari Jadi", "Pertunangan", "Festival", "Acara Persendirian", "Lain-lain"];
 
   return (
     <ScreenContainer className="p-0">
