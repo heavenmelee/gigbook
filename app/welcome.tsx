@@ -64,7 +64,7 @@ export default function WelcomeScreen() {
         } else if (result.user.role === "admin") {
           router.replace("/(admin)");
         } else {
-          router.replace("/(tabs)");
+          router.replace("/welcome");
         }
       }
     } catch (error: any) {

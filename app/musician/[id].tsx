@@ -55,7 +55,7 @@ export default function MusicianDetailScreen() {
       setShowBookingModal(false);
       setSelectedDate("");
       setBookingForm({ eventTime: "", eventEndTime: "", venueName: "", venueAddress: "", specialRequests: "" });
-      router.push("/(tabs)/bookings");
+      router.push("/(customer)/bookings");
     } catch (error) {
       console.error("Failed to create booking:", error);
     }

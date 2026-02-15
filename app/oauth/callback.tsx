@@ -62,7 +62,16 @@ export default function OAuthCallback() {
           setStatus("success");
           console.log("[OAuth] Web authentication successful, redirecting to home...");
           setTimeout(() => {
-            router.replace("/(tabs)");
+            // Route based on user role
+            if (result.user.role === "musician") {
+              router.replace("/(musician)");
+            } else if (result.user.role === "user") {
+              router.replace("/(customer)");
+            } else if (result.user.role === "admin") {
+              router.replace("/(admin)");
+            } else {
+              router.replace("/welcome");
+            }
           }, 1000);
           return;
         }
@@ -159,7 +168,16 @@ export default function OAuthCallback() {
           setStatus("success");
           console.log("[OAuth] Redirecting to home...");
           setTimeout(() => {
-            router.replace("/(tabs)");
+            // Route based on user role
+            if (result.user.role === "musician") {
+              router.replace("/(musician)");
+            } else if (result.user.role === "user") {
+              router.replace("/(customer)");
+            } else if (result.user.role === "admin") {
+              router.replace("/(admin)");
+            } else {
+              router.replace("/welcome");
+            }
           }, 1000);
           return;
         }
@@ -215,7 +233,16 @@ export default function OAuthCallback() {
           // Redirect to home after a short delay
           setTimeout(() => {
             console.log("[OAuth] Executing redirect...");
-            router.replace("/(tabs)");
+            // Route based on user role
+            if (result.user.role === "musician") {
+              router.replace("/(musician)");
+            } else if (result.user.role === "user") {
+              router.replace("/(customer)");
+            } else if (result.user.role === "admin") {
+              router.replace("/(admin)");
+            } else {
+              router.replace("/welcome");
+            }
           }, 1000);
         } else {
           console.error("[OAuth] No session token in result:", result);

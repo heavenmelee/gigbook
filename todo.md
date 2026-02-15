@@ -367,3 +367,9 @@
 - [x] Check if (tabs) is being used instead of (customer) for regular users (YES - found in welcome.tsx line 59)
 - [x] Fix all routing to use (customer) for customer role (fixed welcome.tsx to route based on user.role)
 - [x] Test customer sees new dashboard after login
+
+## Delete Old (tabs) Dashboard (Session 31)
+- [ ] Delete (tabs) folder completely
+- [ ] Remove (tabs) from root _layout.tsx
+- [ ] Verify only (customer), (musician), (admin) dashboards exist
+- [ ] Test customer sees new dashboard

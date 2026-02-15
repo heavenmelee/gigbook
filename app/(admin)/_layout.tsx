@@ -12,7 +12,7 @@ export default function AdminTabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isLoading, isAuthenticated, isAdmin } = useAuthContext();
+  const { isLoading, isAuthenticated, isAdmin, user } = useAuthContext();
 
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
   const tabBarHeight = 56 + bottomPadding;
@@ -26,7 +26,14 @@ export default function AdminTabLayout() {
     }
 
     if (!isAdmin) {
-      router.replace("/(tabs)");
+      // Route to appropriate dashboard based on role
+      if (user?.role === "musician") {
+        router.replace("/(musician)");
+      } else if (user?.role === "user") {
+        router.replace("/(customer)");
+      } else {
+        router.replace("/welcome");
+      }
       return;
     }
   }, [isLoading, isAuthenticated, isAdmin, router]);

@@ -87,7 +87,6 @@ export default function RootLayout() {
           <LanguageProvider>
             <AuthProvider>
             <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
               <Stack.Screen name="(musician)" />
               <Stack.Screen name="(customer)" />
               <Stack.Screen name="(admin)" />
