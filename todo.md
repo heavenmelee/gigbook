@@ -178,6 +178,10 @@
 - [x] Earnings summary card (gross, monthly, escrow, total gigs)
 - [x] Enhanced getMusicianStats API with comprehensive data
 
+## UI Cleanup (Current Session 10)
+- [x] Remove Listing tab from musician dashboard
+- [x] Remove Kalendar tab from musician dashboard
+
 ## Profile & Package Management (Current Session 9)
 - [x] Extend database schema for profile fields (realName, languages, travelRadius, travelFee, socialLinks, lineupType, members, skills, setlist, equipment, venueRequirements, techRider)
 - [x] Create packages table schema (name, eventType, duration, sets, breakTime, basePrice, inclusions, addOns, rules)

@@ -60,20 +60,6 @@ export default function MusicianTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="listings"
-        options={{
-          title: "Listing",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="music.note.list" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: "Kalendar",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="bookings"
         options={{
           title: "Tempahan",
