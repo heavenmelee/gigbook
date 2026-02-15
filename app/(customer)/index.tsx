@@ -8,56 +8,59 @@ import {
   FlatList,
   Image,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-
-interface Musician {
-  id: string;
-  stageName: string;
-  photo: string;
-  rating: number;
-  reviews: number;
-  startingPrice: number;
-  verified: boolean;
-}
+import { trpc } from "@/lib/trpc";
+import { useMemo } from "react";
 
 export default function CustomerHomeScreen() {
   const colors = useColors();
 
-  // Mock data
-  const mockMusicians: Musician[] = [
-    {
-      id: "1",
-      stageName: "Jazz Quartet",
-      photo: "https://via.placeholder.com/200",
-      rating: 4.8,
-      reviews: 45,
-      startingPrice: 800,
-      verified: true,
-    },
-    {
-      id: "2",
-      stageName: "Acoustic Duo",
-      photo: "https://via.placeholder.com/200",
-      rating: 4.9,
-      reviews: 62,
-      startingPrice: 600,
-      verified: true,
-    },
-    {
-      id: "3",
-      stageName: "DJ Pro",
-      photo: "https://via.placeholder.com/200",
-      rating: 4.7,
-      reviews: 38,
-      startingPrice: 1200,
-      verified: false,
-    },
-  ];
+  // Fetch all musicians
+  const getMusiciansQuery = trpc.browse.getMusicians.useQuery({
+    genre: undefined,
+    location: undefined,
+    search: undefined,
+  });
+
+  // Normalize API response to consistent format
+  const normalizedMusicians = useMemo(() => {
+    if (!getMusiciansQuery.data) return [];
+    return getMusiciansQuery.data.map((m: any) => ({
+      id: m.profile?.id || m.id,
+      stageName: m.profile?.stageName || m.stageName || "Musician",
+      coverPhoto: m.profile?.coverPhoto,
+      rating: m.profile?.rating || 0,
+      totalReviews: m.profile?.totalReviews || 0,
+      verified: m.profile?.verified || false,
+      genre: m.profile?.genre,
+    }));
+  }, [getMusiciansQuery.data]);
+
+  // Organize musicians by category
+  const topRatedMusicians = useMemo(() => {
+    return normalizedMusicians
+      .filter((m: any) => m.verified)
+      .sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 3);
+  }, [normalizedMusicians]);
+
+  const weddingMusicians = useMemo(() => {
+    return normalizedMusicians
+      .filter((m: any) => m.verified && m.genre?.toLowerCase().includes("wedding"))
+      .slice(0, 2);
+  }, [normalizedMusicians]);
+
+  const acousticMusicians = useMemo(() => {
+    return normalizedMusicians
+      .filter((m: any) => m.verified && (m.genre?.toLowerCase().includes("acoustic") || m.genre?.toLowerCase().includes("chill")))
+      .slice(0, 2);
+  }, [normalizedMusicians]);
 
   const categories = ["Wedding", "Corporate", "Birthday", "Cafe/Restaurant", "Festival"];
 
@@ -68,7 +71,7 @@ export default function CustomerHomeScreen() {
     router.push("/(customer)/explore");
   };
 
-  const handleViewMusician = (musicianId: string) => {
+  const handleViewMusician = (musicianId: number) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -82,13 +85,16 @@ export default function CustomerHomeScreen() {
     router.push("/(customer)/explore");
   };
 
-  const renderMusicianCard = ({ item }: { item: Musician }) => (
+  const renderMusicianCard = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[s.musicianCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={() => handleViewMusician(item.id)}
       activeOpacity={0.7}
     >
-      <Image source={{ uri: item.photo }} style={s.musicianPhoto} />
+      <Image
+        source={{ uri: item.coverPhoto || "https://via.placeholder.com/200" }}
+        style={s.musicianPhoto}
+      />
       {item.verified && (
         <View style={[s.verifiedBadge, { backgroundColor: colors.success }]}>
           <IconSymbol name="checkmark.circle.fill" size={14} color="#fff" />
@@ -101,14 +107,22 @@ export default function CustomerHomeScreen() {
         <View style={s.ratingRow}>
           <IconSymbol name="star.fill" size={14} color={colors.warning} />
           <Text style={[s.rating, { color: colors.foreground }]}>
-            {item.rating.toFixed(1)}
+            {(item.rating || 0).toFixed(1)}
           </Text>
-          <Text style={[s.reviews, { color: colors.muted }]}>({item.reviews})</Text>
+          <Text style={[s.reviews, { color: colors.muted }]}>({item.totalReviews || 0})</Text>
         </View>
-        <Text style={[s.price, { color: colors.primary }]}>from RM {item.startingPrice}</Text>
+        <Text style={[s.price, { color: colors.primary }]}>View profile</Text>
       </View>
     </TouchableOpacity>
   );
+
+  if (getMusiciansQuery.isLoading) {
+    return (
+      <ScreenContainer className="flex items-center justify-center">
+        <ActivityIndicator size="large" color={colors.primary} />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer className="p-0">
@@ -174,61 +188,67 @@ export default function CustomerHomeScreen() {
           </View>
 
           {/* ==================== TOP RATED CAROUSEL ==================== */}
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <Text style={[s.sectionTitle, { color: colors.foreground }]}>Top rated near you</Text>
-              <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
-                <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
-              </TouchableOpacity>
+          {topRatedMusicians.length > 0 && (
+            <View style={s.section}>
+              <View style={s.sectionHeader}>
+                <Text style={[s.sectionTitle, { color: colors.foreground }]}>Top rated near you</Text>
+                <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
+                  <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={topRatedMusicians}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.carouselContainer}
+                renderItem={renderMusicianCard}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={true}
+              />
             </View>
-            <FlatList
-              data={mockMusicians}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.carouselContainer}
-              renderItem={renderMusicianCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={true}
-            />
-          </View>
+          )}
 
           {/* ==================== BEST FOR WEDDINGS ==================== */}
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <Text style={[s.sectionTitle, { color: colors.foreground }]}>Best for weddings</Text>
-              <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
-                <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
-              </TouchableOpacity>
+          {weddingMusicians.length > 0 && (
+            <View style={s.section}>
+              <View style={s.sectionHeader}>
+                <Text style={[s.sectionTitle, { color: colors.foreground }]}>Best for weddings</Text>
+                <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
+                  <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={weddingMusicians}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.carouselContainer}
+                renderItem={renderMusicianCard}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={true}
+              />
             </View>
-            <FlatList
-              data={mockMusicians.slice(0, 2)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.carouselContainer}
-              renderItem={renderMusicianCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={true}
-            />
-          </View>
+          )}
 
           {/* ==================== ACOUSTIC & CHILL ==================== */}
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <Text style={[s.sectionTitle, { color: colors.foreground }]}>Acoustic & chill</Text>
-              <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
-                <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
-              </TouchableOpacity>
+          {acousticMusicians.length > 0 && (
+            <View style={s.section}>
+              <View style={s.sectionHeader}>
+                <Text style={[s.sectionTitle, { color: colors.foreground }]}>Acoustic & chill</Text>
+                <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
+                  <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={acousticMusicians}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.carouselContainer}
+                renderItem={renderMusicianCard}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={true}
+              />
             </View>
-            <FlatList
-              data={mockMusicians.slice(1, 3)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.carouselContainer}
-              renderItem={renderMusicianCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={true}
-            />
-          </View>
+          )}
         </View>
       </ScrollView>
     </ScreenContainer>

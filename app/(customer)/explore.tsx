@@ -15,78 +15,100 @@ import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { trpc } from "@/lib/trpc";
+import { ActivityIndicator } from "react-native";
 
 interface Musician {
-  id: string;
-  stageName: string;
-  photo: string;
-  rating: number;
-  reviews: number;
-  startingPrice: number;
+  id: number;
+  stageName: string | null;
+  coverPhoto?: string | null;
+  rating: number | null;
+  totalReviews: number;
   verified: boolean;
-  fastResponder: boolean;
-  distance: number;
+  genre?: string | null;
+  fastResponder?: boolean;
+  distance?: number;
 }
 
 export default function CustomerExploreScreen() {
   const colors = useColors();
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<string | undefined>(undefined);
 
-  // Mock data
+  // Fetch musicians
+  const getMusiciansQuery = trpc.browse.getMusicians.useQuery({
+    genre: selectedGenre,
+    location: undefined,
+    search: searchQuery || undefined,
+  });
+
+  // Normalize API response
+  const normalizedMusicians = useMemo(() => {
+    if (!getMusiciansQuery.data) return [];
+    return getMusiciansQuery.data.map((m: any) => ({
+      id: m.profile?.id || m.id,
+      stageName: m.profile?.stageName || m.stageName || "Musician",
+      coverPhoto: m.profile?.coverPhoto,
+      rating: m.profile?.rating || 0,
+      totalReviews: m.profile?.totalReviews || 0,
+      verified: m.profile?.verified || false,
+      genre: m.profile?.genre,
+      fastResponder: true,
+      distance: Math.random() * 20,
+    }));
+  }, [getMusiciansQuery.data]);
+
+  // Mock data (fallback)
   const mockMusicians: Musician[] = [
     {
-      id: "1",
+      id: 1,
       stageName: "Jazz Quartet",
-      photo: "https://via.placeholder.com/200",
+      coverPhoto: "https://via.placeholder.com/200",
       rating: 4.8,
-      reviews: 45,
-      startingPrice: 800,
+      totalReviews: 45,
       verified: true,
       fastResponder: true,
       distance: 3,
     },
     {
-      id: "2",
+      id: 2,
       stageName: "Acoustic Duo",
-      photo: "https://via.placeholder.com/200",
+      coverPhoto: "https://via.placeholder.com/200",
       rating: 4.9,
-      reviews: 62,
-      startingPrice: 600,
+      totalReviews: 62,
       verified: true,
       fastResponder: true,
       distance: 5,
     },
     {
-      id: "3",
+      id: 3,
       stageName: "DJ Pro",
-      photo: "https://via.placeholder.com/200",
+      coverPhoto: "https://via.placeholder.com/200",
       rating: 4.7,
-      reviews: 38,
-      startingPrice: 1200,
+      totalReviews: 38,
       verified: false,
       fastResponder: false,
       distance: 8,
     },
     {
-      id: "4",
+      id: 4,
       stageName: "String Ensemble",
-      photo: "https://via.placeholder.com/200",
+      coverPhoto: "https://via.placeholder.com/200",
       rating: 4.6,
-      reviews: 28,
-      startingPrice: 950,
+      totalReviews: 28,
       verified: true,
       fastResponder: true,
       distance: 2,
     },
   ];
 
-  const handleViewMusician = (musicianId: string) => {
+  const handleViewMusician = (musicianId: number) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    router.push(`/(customer)/musician-profile?id=${musicianId}`);
+    router.push(`/(customer)/musician-profile?id=${musicianId.toString()}`);
   };
 
   const handleOpenFilters = () => {
@@ -111,7 +133,7 @@ export default function CustomerExploreScreen() {
       activeOpacity={0.7}
     >
       <View style={s.cardTop}>
-        <Image source={{ uri: item.photo }} style={s.musicianPhoto} />
+        <Image source={{ uri: item.coverPhoto || "https://via.placeholder.com/200" }} style={s.musicianPhoto} />
         <View style={s.badges}>
           {item.verified && (
             <View style={[s.badge, { backgroundColor: colors.success }]}>
@@ -129,20 +151,20 @@ export default function CustomerExploreScreen() {
       </View>
       <View style={s.cardInfo}>
         <Text style={[s.stageName, { color: colors.foreground }]} numberOfLines={1}>
-          {item.stageName}
+          {item.stageName || "Musician"}
         </Text>
         <View style={s.ratingRow}>
           <IconSymbol name="star.fill" size={13} color={colors.warning} />
           <Text style={[s.rating, { color: colors.foreground }]}>
-            {item.rating.toFixed(1)}
+            {(item.rating || 0).toFixed(1)}
           </Text>
-          <Text style={[s.reviews, { color: colors.muted }]}>({item.reviews})</Text>
+          <Text style={[s.reviews, { color: colors.muted }]}>({item.totalReviews || 0})</Text>
         </View>
         <View style={s.priceDistanceRow}>
-          <Text style={[s.price, { color: colors.primary }]}>from RM {item.startingPrice}</Text>
+          <Text style={[s.price, { color: colors.primary }]}>View profile</Text>
           <View style={s.distanceRow}>
             <IconSymbol name="location.fill" size={12} color={colors.muted} />
-            <Text style={[s.distance, { color: colors.muted }]}>{item.distance} km</Text>
+            <Text style={[s.distance, { color: colors.muted }]}>{(item.distance || 0).toFixed(0)} km</Text>
           </View>
         </View>
       </View>
@@ -207,9 +229,9 @@ export default function CustomerExploreScreen() {
         <View style={s.content}>
           {/* ==================== RESULTS ==================== */}
           <FlatList
-            data={mockMusicians}
+              data={normalizedMusicians.length > 0 ? normalizedMusicians : mockMusicians}
             renderItem={renderMusicianCard}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id.toString()}
             scrollEnabled={false}
             contentContainerStyle={s.resultsList}
           />

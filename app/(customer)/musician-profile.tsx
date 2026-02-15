@@ -8,12 +8,14 @@ import {
   Platform,
   Alert,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
+import { trpc } from "@/lib/trpc";
 
 interface Package {
   id: string;
@@ -26,19 +28,28 @@ interface Package {
 export default function MusicianProfileScreen() {
   const colors = useColors();
   const { id } = useLocalSearchParams();
+  const musicianId = parseInt(id as string) || 1;
 
-  // Mock data
-  const musician = {
-    id: id || "1",
-    stageName: "Jazz Quartet",
-    photo: "https://via.placeholder.com/300",
-    rating: 4.8,
-    reviews: 45,
-    verified: true,
-    bio: "Professional jazz quartet with 15+ years of experience. Perfect for weddings, corporate events, and intimate gatherings.",
+  // Fetch musician profile - using browse.getMusicians as fallback since getMusicianById might not exist
+  const getAllMusiciansQuery = trpc.browse.getMusicians.useQuery({
+    genre: undefined,
+    location: undefined,
+    search: undefined,
+  });
+
+  // Find the specific musician from the list
+  const musician = getAllMusiciansQuery.data?.find((m: any) => (m.profile?.id || m.id) === musicianId)?.profile || {
+    id: musicianId,
+    stageName: "Loading...",
+    coverPhoto: "https://via.placeholder.com/300",
+    rating: 0,
+    totalReviews: 0,
+    verified: false,
+    bio: "Loading musician profile...",
   };
 
-  const packages: Package[] = [
+  // Mock packages (would come from API in production)
+  const mockPackages: Package[] = [
     {
       id: "1",
       name: "Standard",
@@ -81,7 +92,7 @@ export default function MusicianProfileScreen() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    router.push(`/(customer)/create-booking?musicianId=${musician.id}&packageId=${packageId}`);
+    router.push(`/(customer)/create-booking?musicianId=${musicianId}&packageId=${packageId}`);
   };
 
   const handleMessage = () => {
@@ -139,6 +150,14 @@ export default function MusicianProfileScreen() {
     </View>
   );
 
+  if (getAllMusiciansQuery.isLoading) {
+    return (
+      <ScreenContainer className="flex items-center justify-center">
+        <ActivityIndicator size="large" color={colors.primary} />
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer className="p-0">
       <ScrollView
@@ -155,7 +174,7 @@ export default function MusicianProfileScreen() {
           >
             <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
           </TouchableOpacity>
-          <Image source={{ uri: musician.photo }} style={s.musicianPhoto} />
+          <Image source={{ uri: musician.coverPhoto || "https://via.placeholder.com/300" }} style={s.musicianPhoto} />
         </View>
 
         <View style={s.content}>
@@ -164,7 +183,7 @@ export default function MusicianProfileScreen() {
             <View style={s.nameRatingRow}>
               <View style={s.nameColumn}>
                 <View style={s.nameRow}>
-                  <Text style={[s.stageName, { color: colors.foreground }]}>{musician.stageName}</Text>
+                  <Text style={[s.stageName, { color: colors.foreground }]}>{musician.stageName || "Musician"}</Text>
                   {musician.verified && (
                     <View style={[s.verifiedBadge, { backgroundColor: colors.success }]}>
                       <IconSymbol name="checkmark.circle.fill" size={16} color="#fff" />
@@ -174,13 +193,15 @@ export default function MusicianProfileScreen() {
                 <View style={s.ratingRow}>
                   <IconSymbol name="star.fill" size={16} color={colors.warning} />
                   <Text style={[s.rating, { color: colors.foreground }]}>
-                    {musician.rating.toFixed(1)}
+                    {typeof musician.rating === 'number' ? musician.rating.toFixed(1) : '0.0'}
                   </Text>
-                  <Text style={[s.reviews, { color: colors.muted }]}>({musician.reviews} reviews)</Text>
+                  <Text style={[s.reviews, { color: colors.muted }]}>({musician.totalReviews || 0} reviews)</Text>
                 </View>
               </View>
             </View>
-            <Text style={[s.bio, { color: colors.muted }]}>{musician.bio}</Text>
+            <Text style={[s.bio, { color: colors.muted }]}>
+              {musician.bio || "Professional musician with years of experience."}
+            </Text>
           </View>
 
           {/* ==================== ACTION BUTTONS ==================== */}
@@ -207,7 +228,7 @@ export default function MusicianProfileScreen() {
           <View style={s.section}>
             <Text style={[s.sectionTitle, { color: colors.foreground }]}>Packages</Text>
             <FlatList
-              data={packages}
+              data={mockPackages}
               renderItem={renderPackage}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
