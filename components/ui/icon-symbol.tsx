@@ -50,6 +50,7 @@ const MAPPING = {
   "doc.text.fill": "description",
   "pause.circle.fill": "pause-circle-filled",
   "trash.fill": "delete",
+  "arrow.up.circle.fill": "arrow-upward",
 } as const satisfies IconMapping;
 
 /**

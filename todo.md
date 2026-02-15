@@ -178,6 +178,15 @@
 - [x] Earnings summary card (gross, monthly, escrow, total gigs)
 - [x] Enhanced getMusicianStats API with comprehensive data
 
+## Wallet Screen Implementation (Current Session 16)
+- [x] Build Wallet UI with segmented tabs (Today/Week/Month)
+- [x] Add Balance card with "Available to cash out" amount and Cash out CTA
+- [x] Implement Pending (Escrow) section with job list
+- [x] Add Earnings Summary (Gross, Platform fee, Net)
+- [x] Build Latest Transactions list with "See all" link
+- [ ] Create Transactions screen with filter chips (deferred)
+- [ ] Create Payout setup screen for KYC (deferred)
+
 ## Calendar Screen Implementation (Current Session 15)
 - [x] Build Calendar UI with month selector and Auto-buffer toggle
 - [x] Implement weekly strip with day tiles and dot indicators
