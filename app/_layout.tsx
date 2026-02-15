@@ -89,6 +89,7 @@ export default function RootLayout() {
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="(musician)" />
+              <Stack.Screen name="(customer)" />
               <Stack.Screen name="(admin)" />
               <Stack.Screen name="oauth/callback" />
               <Stack.Screen name="welcome" options={{ presentation: "fullScreenModal" }} />

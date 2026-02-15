@@ -353,3 +353,10 @@
 - [x] Build Messages tab (threads grouped by booking, chat with quick replies, system messages)
 - [x] Build Profile tab (name, addresses, payment methods, favorites, settings, receipts)
 - [x] Enforce Grab-like UX rules (one primary CTA per screen, card-based, sticky CTAs, status badges)
+
+## Customer Dashboard Visibility Bug (Session 29)
+- [x] Check routing from login/verification to customer dashboard
+- [x] Verify customer dashboard is accessible at correct route
+- [x] Check if users are being redirected to old/wrong dashboard
+- [x] Fix routing and navigation issues (added (customer) route to root _layout.tsx)
+- [x] Test customer dashboard is visible after login
