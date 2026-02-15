@@ -53,6 +53,15 @@ const MAPPING = {
   "trash.fill": "delete",
   "arrow.up.circle.fill": "arrow-upward",
   "camera.fill": "camera-alt",
+  "chevron.left": "chevron-left",
+  "phone.fill": "phone",
+  "paperclip": "attach-file",
+  "checkmark": "check",
+  "bolt.fill": "flash-on",
+  "slider.horizontal.3": "tune",
+  "gift": "card-giftcard",
+  "plus.circle": "add-circle-outline",
+  "doc.text": "description",
 } as const satisfies IconMapping;
 
 /**
