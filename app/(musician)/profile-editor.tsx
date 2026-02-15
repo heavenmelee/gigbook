@@ -109,42 +109,49 @@ export default function MusicianProfileScreen() {
 
   const handleSave = async () => {
     try {
-      await updateMutation.mutateAsync({
-        stageName: formData.stageName,
-        realName: formData.realName,
-        bio: formData.bio,
-        genre: formData.genre,
-        languages: formData.languages,
-        location: formData.location,
-        travelRadius: formData.travelRadius ? parseInt(formData.travelRadius) : undefined,
-        travelFee: formData.travelFee,
+      const payload: Record<string, any> = {
+        stageName: formData.stageName || undefined,
+        realName: formData.realName || undefined,
+        bio: formData.bio || undefined,
+        genre: formData.genre || undefined,
+        languages: formData.languages.length > 0 ? formData.languages : undefined,
+        location: formData.location || undefined,
+        travelRadius: formData.travelRadius ? parseInt(formData.travelRadius) : null,
+        travelFee: formData.travelFee || null,
         socialLinks: {
-          instagram: formData.instagram,
-          tiktok: formData.tiktok,
-          youtube: formData.youtube,
+          instagram: formData.instagram || undefined,
+          tiktok: formData.tiktok || undefined,
+          youtube: formData.youtube || undefined,
         },
-        experienceYears: formData.experienceYears ? parseInt(formData.experienceYears) : undefined,
-        lineupType: formData.lineupType,
-        members: formData.members,
-        skills: formData.skills,
-        setlist: formData.setlist,
+        experienceYears: formData.experienceYears ? parseInt(formData.experienceYears) : null,
+        lineupType: formData.lineupType || undefined,
+        members: formData.members.length > 0 ? formData.members : undefined,
+        skills: formData.skills.length > 0 ? formData.skills : undefined,
+        setlist: formData.setlist.length > 0 ? formData.setlist : undefined,
         ownSoundSystem: formData.ownSoundSystem,
-        equipment: formData.equipment,
+        equipment: formData.equipment.length > 0 ? formData.equipment : undefined,
         venueRequirements: {
-          stageSizeMin: formData.stageSizeMin,
-          powerSupply: formData.powerSupply,
-          soundcheckDuration: formData.soundcheckDuration,
+          stageSizeMin: formData.stageSizeMin || undefined,
+          powerSupply: formData.powerSupply || undefined,
+          soundcheckDuration: formData.soundcheckDuration || undefined,
         },
-        techRider: formData.techRider,
-      });
+        techRider: formData.techRider || null,
+      };
+
+      // Remove undefined top-level keys to avoid sending unnecessary data
+      const cleanPayload = Object.fromEntries(
+        Object.entries(payload).filter(([_, v]) => v !== undefined)
+      );
+
+      await updateMutation.mutateAsync(cleanPayload as any);
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       Alert.alert("Berjaya", "Profil telah dikemaskini");
       refetch();
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      Alert.alert("Ralat", "Gagal kemaskini profil");
+    } catch (error: any) {
+      console.error("Failed to update profile:", error?.message || error);
+      Alert.alert("Ralat", "Gagal kemaskini profil. Sila cuba lagi.");
     }
   };
 

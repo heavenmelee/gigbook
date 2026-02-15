@@ -192,15 +192,15 @@ export const appRouter = router({
         genre: z.string().optional(),
         languages: z.array(z.string()).optional(),
         location: z.string().optional(),
-        travelRadius: z.number().optional(),
-        travelFee: z.string().optional(),
+        travelRadius: z.number().nullable().optional(),
+        travelFee: z.string().nullable().optional(),
         socialLinks: z.object({
           instagram: z.string().optional(),
           tiktok: z.string().optional(),
           youtube: z.string().optional(),
         }).optional(),
-        experienceYears: z.number().optional(),
-        coverPhoto: z.string().optional(),
+        experienceYears: z.number().nullable().optional(),
+        coverPhoto: z.string().nullable().optional(),
         portfolio: z.array(z.string()).optional(),
         lineupType: z.string().optional(),
         members: z.array(z.object({ name: z.string(), instrument: z.string() })).optional(),
@@ -213,11 +213,41 @@ export const appRouter = router({
           powerSupply: z.string().optional(),
           soundcheckDuration: z.string().optional(),
         }).optional(),
-        techRider: z.string().optional(),
+        techRider: z.string().nullable().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        await db.updateMusicianProfile(ctx.user.id, input);
-        return { success: true };
+        try {
+          // Build clean data object, only including defined fields
+          const profileData: Record<string, unknown> = {};
+          
+          if (input.stageName !== undefined) profileData.stageName = input.stageName;
+          if (input.realName !== undefined) profileData.realName = input.realName;
+          if (input.bio !== undefined) profileData.bio = input.bio;
+          if (input.genre !== undefined) profileData.genre = input.genre;
+          if (input.languages !== undefined) profileData.languages = input.languages;
+          if (input.location !== undefined) profileData.location = input.location;
+          if (input.travelRadius !== undefined) profileData.travelRadius = input.travelRadius;
+          if (input.travelFee !== undefined) profileData.travelFee = input.travelFee || null;
+          if (input.socialLinks !== undefined) profileData.socialLinks = input.socialLinks;
+          if (input.experienceYears !== undefined) profileData.experienceYears = input.experienceYears;
+          if (input.coverPhoto !== undefined) profileData.coverPhoto = input.coverPhoto || null;
+          if (input.portfolio !== undefined) profileData.portfolio = input.portfolio;
+          if (input.lineupType !== undefined) profileData.lineupType = input.lineupType;
+          if (input.members !== undefined) profileData.members = input.members;
+          if (input.skills !== undefined) profileData.skills = input.skills;
+          if (input.setlist !== undefined) profileData.setlist = input.setlist;
+          if (input.ownSoundSystem !== undefined) profileData.ownSoundSystem = input.ownSoundSystem;
+          if (input.equipment !== undefined) profileData.equipment = input.equipment;
+          if (input.venueRequirements !== undefined) profileData.venueRequirements = input.venueRequirements;
+          if (input.techRider !== undefined) profileData.techRider = input.techRider || null;
+          
+          console.log("[updateProfile] Updating profile for user:", ctx.user.id, "fields:", Object.keys(profileData));
+          await db.updateMusicianProfile(ctx.user.id, profileData as any);
+          return { success: true };
+        } catch (error: any) {
+          console.error("[updateProfile] Error:", error?.message || error);
+          throw error;
+        }
       }),
 
     getStats: protectedProcedure.query(async ({ ctx }) => {

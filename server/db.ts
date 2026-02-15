@@ -241,7 +241,27 @@ export async function getMusicianProfileById(id: number) {
 export async function updateMusicianProfile(userId: number, data: Partial<InsertMusicianProfile>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(musicianProfiles).set(data).where(eq(musicianProfiles.userId, userId));
+  
+  // Sanitize data: remove undefined values and convert empty strings to null for optional fields
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) continue;
+    if (value === "" && ["travelFee", "techRider", "coverPhoto"].includes(key)) {
+      sanitized[key] = null;
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  
+  if (Object.keys(sanitized).length === 0) return;
+  
+  try {
+    await db.update(musicianProfiles).set(sanitized).where(eq(musicianProfiles.userId, userId));
+  } catch (error: any) {
+    console.error("[DB] updateMusicianProfile failed:", error?.message || error);
+    console.error("[DB] Data keys:", Object.keys(sanitized));
+    throw new Error(`Failed query: ${error?.message || "Unknown database error"}`);
+  }
 }
 
 export async function getAllMusicians(filters?: { genre?: string; location?: string; search?: string }) {
