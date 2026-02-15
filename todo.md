@@ -178,6 +178,26 @@
 - [x] Earnings summary card (gross, monthly, escrow, total gigs)
 - [x] Enhanced getMusicianStats API with comprehensive data
 
+## Musician Dashboard Rebuild (Current Session 13)
+- [x] Update musician tab layout to 5 tabs (Home, Jobs, Calendar, Wallet, Profile)
+- [x] Rebuild Home screen with new design (hero card, requests carousel, quick stats, to-do)
+- [x] Create Jobs screen placeholder
+- [x] Create Calendar screen placeholder
+- [x] Create Wallet screen placeholder
+- [ ] Move Bookings, Packages, Documents under Profile → Settings
+
+## i18n Implementation (Current Session 12)
+- [ ] Create language context and provider
+- [ ] Create useTranslation hook
+- [ ] Create complete EN translation file
+- [ ] Create complete MS translation file
+- [ ] Integrate i18n into musician screens
+- [ ] Integrate i18n into user screens
+- [ ] Integrate i18n into auth screens
+- [ ] Add language toggle button in settings/profile
+- [ ] Persist language preference in AsyncStorage
+- [x] Translate tab labels to English
+
 ## Language Localization (Current Session 11)
 - [x] Convert musician dashboard to Bahasa Melayu (already in Malay)
 - [x] Convert profile editor to Bahasa Melayu (already in Malay)

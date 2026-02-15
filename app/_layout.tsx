@@ -18,6 +18,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { AuthProvider } from "@/lib/auth-context";
+import { LanguageProvider } from "@/lib/language-context";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -83,7 +84,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="(musician)" />
@@ -97,7 +99,8 @@ export default function RootLayout() {
               <Stack.Screen name="booking/new" />
             </Stack>
             <StatusBar style="auto" />
-          </AuthProvider>
+            </AuthProvider>
+          </LanguageProvider>
         </QueryClientProvider>
       </trpc.Provider>
     </GestureHandlerRootView>
