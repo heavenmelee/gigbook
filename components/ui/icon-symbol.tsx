@@ -46,6 +46,7 @@ const MAPPING = {
   "waveform.circle.fill": "graphic-eq",
   "mic.fill": "mic",
   "guitar.fill": "music-note",
+  "guitar": "music-note",
   "ellipsis": "more-horiz",
   "doc.text.fill": "description",
   "pause.circle.fill": "pause-circle-filled",
