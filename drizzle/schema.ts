@@ -26,12 +26,28 @@ export const musicianProfiles = mysqlTable("musician_profiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
   stageName: varchar("stageName", { length: 255 }),
+  realName: varchar("realName", { length: 255 }), // Private, not shown to customers
   bio: text("bio"),
   genre: varchar("genre", { length: 100 }),
+  languages: json("languages").$type<string[]>(), // ["Melayu", "English", "Mandarin"]
   location: varchar("location", { length: 255 }),
+  travelRadius: int("travelRadius").default(0), // km
+  travelFee: decimal("travelFee", { precision: 10, scale: 2 }), // RM per km or flat
+  socialLinks: json("socialLinks").$type<{ instagram?: string; tiktok?: string; youtube?: string }>(),
   experienceYears: int("experienceYears").default(0),
   coverPhoto: text("coverPhoto"),
   portfolio: json("portfolio").$type<string[]>(),
+  // Line-up & Skills
+  lineupType: varchar("lineupType", { length: 50 }), // Solo, Duo, Band
+  members: json("members").$type<Array<{ name: string; instrument: string }>>(),
+  skills: json("skills").$type<string[]>(), // ["emcee", "DJ add-on", "acoustic"]
+  setlist: json("setlist").$type<string[]>(), // Typical 10-20 songs
+  // Equipment & Rider
+  ownSoundSystem: boolean("ownSoundSystem").default(false),
+  equipment: json("equipment").$type<string[]>(), // ["mic", "DI box", "monitor", "mixer"]
+  venueRequirements: json("venueRequirements").$type<{ stageSizeMin?: string; powerSupply?: string; soundcheckDuration?: string }>(),
+  techRider: text("techRider"), // PDF URL
+  // Stats
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
   totalReviews: int("totalReviews").default(0),
   totalGigs: int("totalGigs").default(0),
@@ -55,6 +71,33 @@ export const listings = mysqlTable("listings", {
   priceType: mysqlEnum("priceType", ["per_hour", "per_event", "per_day"]).default("per_event").notNull(),
   duration: int("duration"), // in minutes
   photos: json("photos").$type<string[]>(),
+  isActive: boolean("isActive").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Packages - Service packages offered by musicians
+ */
+export const packages = mysqlTable("packages", {
+  id: int("id").autoincrement().primaryKey(),
+  musicianId: int("musicianId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  eventType: varchar("eventType", { length: 100 }), // Wedding, Corporate, Birthday, etc.
+  duration: int("duration").notNull(), // Total duration in minutes
+  sets: int("sets").default(1), // Number of sets
+  breakTime: int("breakTime").default(0), // Break time in minutes
+  basePrice: decimal("basePrice", { precision: 10, scale: 2 }).notNull(),
+  inclusions: json("inclusions").$type<string[]>(), // ["sound system", "request songs"]
+  addOns: json("addOns").$type<Array<{ name: string; price: string }>>(), // [{name: "Extra 30 min", price: "200"}]
+  rules: json("rules").$type<{
+    overtimeRate?: string; // Per 30 min
+    depositPercent?: number; // e.g., 30
+    minLeadTime?: number; // Days, e.g., 7
+    weekendOnly?: boolean;
+  }>(),
+  isPopular: boolean("isPopular").default(false),
+  isBestValue: boolean("isBestValue").default(false),
   isActive: boolean("isActive").default(true),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -299,3 +342,5 @@ export type XenditPayout = typeof xenditPayouts.$inferSelect;
 export type InsertXenditPayout = typeof xenditPayouts.$inferInsert;
 export type MusicianBankAccount = typeof musicianBankAccounts.$inferSelect;
 export type InsertMusicianBankAccount = typeof musicianBankAccounts.$inferInsert;
+export type Package = typeof packages.$inferSelect;
+export type InsertPackage = typeof packages.$inferInsert;

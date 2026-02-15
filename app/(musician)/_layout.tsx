@@ -88,6 +88,13 @@ export default function MusicianTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="packages"
+        options={{
+          title: "Pakej",
+          tabBarIcon: ({ color}) => <IconSymbol size={28} name="music.note.list" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="documents"
         options={{
           title: "Dokumen",

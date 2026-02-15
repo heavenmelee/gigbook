@@ -187,12 +187,33 @@ export const appRouter = router({
     updateProfile: protectedProcedure
       .input(z.object({
         stageName: z.string().optional(),
+        realName: z.string().optional(),
         bio: z.string().optional(),
         genre: z.string().optional(),
+        languages: z.array(z.string()).optional(),
         location: z.string().optional(),
+        travelRadius: z.number().optional(),
+        travelFee: z.string().optional(),
+        socialLinks: z.object({
+          instagram: z.string().optional(),
+          tiktok: z.string().optional(),
+          youtube: z.string().optional(),
+        }).optional(),
         experienceYears: z.number().optional(),
         coverPhoto: z.string().optional(),
         portfolio: z.array(z.string()).optional(),
+        lineupType: z.string().optional(),
+        members: z.array(z.object({ name: z.string(), instrument: z.string() })).optional(),
+        skills: z.array(z.string()).optional(),
+        setlist: z.array(z.string()).optional(),
+        ownSoundSystem: z.boolean().optional(),
+        equipment: z.array(z.string()).optional(),
+        venueRequirements: z.object({
+          stageSizeMin: z.string().optional(),
+          powerSupply: z.string().optional(),
+          soundcheckDuration: z.string().optional(),
+        }).optional(),
+        techRider: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.updateMusicianProfile(ctx.user.id, input);
@@ -251,6 +272,87 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.deleteListing(input.id);
         return { success: true };
+      }),
+
+    getPackages: protectedProcedure.query(async ({ ctx }) => {
+      const profile = await db.getMusicianProfileByUserId(ctx.user.id);
+      if (!profile) return [];
+      return db.getPackagesByMusicianId(profile.id);
+    }),
+
+    createPackage: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        eventType: z.string().optional(),
+        duration: z.number(),
+        sets: z.number().default(1),
+        breakTime: z.number().default(0),
+        basePrice: z.string(),
+        inclusions: z.array(z.string()).optional(),
+        addOns: z.array(z.object({ name: z.string(), price: z.string() })).optional(),
+        rules: z.object({
+          overtimeRate: z.string().optional(),
+          depositPercent: z.number().optional(),
+          minLeadTime: z.number().optional(),
+          weekendOnly: z.boolean().optional(),
+        }).optional(),
+        isPopular: z.boolean().default(false),
+        isBestValue: z.boolean().default(false),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await db.getMusicianProfileByUserId(ctx.user.id);
+        if (!profile) throw new Error("Musician profile not found");
+        const id = await db.createPackage({ ...input, musicianId: profile.id });
+        return { id };
+      }),
+
+    updatePackage: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        eventType: z.string().optional(),
+        duration: z.number().optional(),
+        sets: z.number().optional(),
+        breakTime: z.number().optional(),
+        basePrice: z.string().optional(),
+        inclusions: z.array(z.string()).optional(),
+        addOns: z.array(z.object({ name: z.string(), price: z.string() })).optional(),
+        rules: z.object({
+          overtimeRate: z.string().optional(),
+          depositPercent: z.number().optional(),
+          minLeadTime: z.number().optional(),
+          weekendOnly: z.boolean().optional(),
+        }).optional(),
+        isPopular: z.boolean().optional(),
+        isBestValue: z.boolean().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updatePackage(id, data);
+        return { success: true };
+      }),
+
+    deletePackage: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deletePackage(input.id);
+        return { success: true };
+      }),
+
+    duplicatePackage: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await db.getMusicianProfileByUserId(ctx.user.id);
+        if (!profile) throw new Error("Musician profile not found");
+        const pkg = await db.getPackageById(input.id);
+        if (!pkg) throw new Error("Package not found");
+        const newId = await db.createPackage({
+          ...pkg,
+          musicianId: profile.id,
+          name: pkg.name + " (Copy)",
+        });
+        return { id: newId };
       }),
 
     getAvailability: protectedProcedure

@@ -5,6 +5,7 @@ import {
   users,
   musicianProfiles,
   listings,
+  packages,
   availability,
   bookings,
   payments,
@@ -18,6 +19,7 @@ import {
   musicianBankAccounts,
   InsertMusicianProfile,
   InsertListing,
+  InsertPackage,
   InsertAvailability,
   InsertBooking,
   InsertPayment,
@@ -329,6 +331,40 @@ export async function deleteListing(id: number) {
   // Delete related completed/cancelled bookings first, then delete listing
   await db.delete(bookings).where(eq(bookings.listingId, id));
   await db.delete(listings).where(eq(listings.id, id));
+}
+
+// ==================== PACKAGE QUERIES ====================
+
+export async function getPackagesByMusicianId(musicianId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(packages).where(eq(packages.musicianId, musicianId)).orderBy(desc(packages.createdAt));
+}
+
+export async function getPackageById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const results = await db.select().from(packages).where(eq(packages.id, id)).limit(1);
+  return results[0] || null;
+}
+
+export async function createPackage(data: InsertPackage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(packages).values(data);
+  return result[0].insertId;
+}
+
+export async function updatePackage(id: number, data: Partial<InsertPackage>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(packages).set(data).where(eq(packages.id, id));
+}
+
+export async function deletePackage(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(packages).where(eq(packages.id, id));
 }
 
 // ==================== AVAILABILITY QUERIES ====================
