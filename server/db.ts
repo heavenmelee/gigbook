@@ -592,10 +592,16 @@ export async function getAdminStats() {
 
 export async function getMusicianStats(userId: number) {
   const db = await getDb();
-  if (!db) return { totalEarnings: "0", pendingPayouts: "0", upcomingGigs: 0, totalGigs: 0 };
+  const defaultStats = {
+    totalEarnings: "0", pendingPayouts: "0", monthlyEarnings: "0",
+    upcomingGigs: 0, totalGigs: 0, newRequests: 0,
+    avgRating: "0.00", totalReviews: 0, profileCompletion: 0,
+    upcomingBookings: [] as any[], pendingBookings: [] as any[],
+  };
+  if (!db) return defaultStats;
 
   const profile = await getMusicianProfileByUserId(userId);
-  if (!profile) return { totalEarnings: "0", pendingPayouts: "0", upcomingGigs: 0, totalGigs: 0 };
+  if (!profile) return defaultStats;
 
   const [earnings] = await db
     .select({ total: sql<string>`COALESCE(SUM(musicianPayout), 0)` })
@@ -607,22 +613,66 @@ export async function getMusicianStats(userId: number) {
     .from(payments)
     .where(and(eq(payments.musicianId, profile.id), eq(payments.status, "escrow")));
 
+  // Monthly earnings (current month)
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  const monthStartStr = monthStart.toISOString().split("T")[0];
+  const [monthlyEarn] = await db
+    .select({ total: sql<string>`COALESCE(SUM(musicianPayout), 0)` })
+    .from(payments)
+    .where(and(eq(payments.musicianId, profile.id), eq(payments.status, "released"), gte(payments.createdAt, new Date(monthStartStr))));
+
   const today = new Date().toISOString().split("T")[0];
-  const [upcoming] = await db
+  const sevenDaysLater = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+
+  // Upcoming bookings (next 7 days)
+  const [upcomingCount] = await db
     .select({ count: sql<number>`count(*)` })
     .from(bookings)
     .where(and(eq(bookings.musicianId, profile.id), eq(bookings.status, "confirmed"), gte(bookings.eventDate, today)));
+
+  const upcomingBookingsList = await db.select().from(bookings)
+    .where(and(eq(bookings.musicianId, profile.id), eq(bookings.status, "confirmed"), gte(bookings.eventDate, today), lte(bookings.eventDate, sevenDaysLater)))
+    .orderBy(bookings.eventDate)
+    .limit(5);
+
+  // New requests (pending)
+  const pendingBookingsList = await db.select().from(bookings)
+    .where(and(eq(bookings.musicianId, profile.id), eq(bookings.status, "approved")))
+    .orderBy(desc(bookings.createdAt))
+    .limit(5);
+
+  const [newReqCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(bookings)
+    .where(and(eq(bookings.musicianId, profile.id), eq(bookings.status, "approved")));
 
   const [total] = await db
     .select({ count: sql<number>`count(*)` })
     .from(bookings)
     .where(and(eq(bookings.musicianId, profile.id), eq(bookings.status, "completed")));
 
+  // Profile completion calculation
+  let completion = 20; // base
+  if (profile.stageName) completion += 15;
+  if (profile.bio) completion += 15;
+  if (profile.genre) completion += 10;
+  if (profile.location) completion += 10;
+  if (profile.coverPhoto) completion += 15;
+  if (profile.portfolio && profile.portfolio.length > 0) completion += 15;
+
   return {
     totalEarnings: earnings.total || "0",
     pendingPayouts: pending.total || "0",
-    upcomingGigs: upcoming.count,
+    monthlyEarnings: monthlyEarn.total || "0",
+    upcomingGigs: upcomingCount.count,
     totalGigs: total.count,
+    newRequests: newReqCount.count,
+    avgRating: profile.rating || "0.00",
+    totalReviews: profile.totalReviews || 0,
+    profileCompletion: Math.min(completion, 100),
+    upcomingBookings: upcomingBookingsList,
+    pendingBookings: pendingBookingsList,
   };
 }
 
