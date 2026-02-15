@@ -50,6 +50,7 @@ export const listings = mysqlTable("listings", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   category: varchar("category", { length: 100 }),
+  genre: varchar("genre", { length: 100 }),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   priceType: mysqlEnum("priceType", ["per_hour", "per_event", "per_day"]).default("per_event").notNull(),
   duration: int("duration"), // in minutes

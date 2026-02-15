@@ -1,0 +1,1 @@
+ALTER TABLE `listings` ADD `genre` varchar(100);
