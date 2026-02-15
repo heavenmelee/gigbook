@@ -345,18 +345,18 @@ export default function MusicianDashboardScreen() {
             <View style={s.quickActionsGrid}>
               <TouchableOpacity
                 style={[s.quickAction, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => router.push("/(musician)/calendar")}
+                onPress={() => router.push("/(musician)/profile")}
                 activeOpacity={0.7}
               >
                 <View style={[s.quickActionIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="calendar" size={24} color={colors.primary} />
+                  <IconSymbol name="person.fill" size={24} color={colors.primary} />
                 </View>
-                <Text style={[s.quickActionLabel, { color: colors.foreground }]}>Kemaskini{"\n"}Ketersediaan</Text>
+                <Text style={[s.quickActionLabel, { color: colors.foreground }]}>Kemaskini{"\n"}Profil</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[s.quickAction, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => router.push("/(musician)/listings")}
+                onPress={() => router.push("/(musician)/packages")}
                 activeOpacity={0.7}
               >
                 <View style={[s.quickActionIcon, { backgroundColor: colors.success + "15" }]}>

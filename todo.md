@@ -181,6 +181,9 @@
 ## UI Cleanup (Current Session 10)
 - [x] Remove Listing tab from musician dashboard
 - [x] Remove Kalendar tab from musician dashboard
+- [x] Delete unused listings.tsx file
+- [x] Delete unused calendar.tsx file
+- [x] Fix dashboard quick action buttons to point to correct routes (profile and packages)
 
 ## Profile & Package Management (Current Session 9)
 - [x] Extend database schema for profile fields (realName, languages, travelRadius, travelFee, socialLinks, lineupType, members, skills, setlist, equipment, venueRequirements, techRider)
