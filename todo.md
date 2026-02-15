@@ -156,3 +156,7 @@
 - [x] Improve musician listings form with dropdown selectors for category and other suitable fields
 - [x] Redesign musician listing display with professional UI (kemas, professional card design, visual hierarchy)
 
+## Bug Fixes (Current Session 5)
+- [x] Fix "Unable to transform response from server" error during login (added genre field to router schemas)
+- [x] Fix logout API call failed error (server restart resolved)
+
