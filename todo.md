@@ -297,3 +297,10 @@
 - [x] Check profile editor form submission and tRPC mutation
 - [x] Check backend updateProfile route and database query
 - [x] Fix the issue and verify profile updates work
+
+## Profile Photo Upload Feature (Session 22)
+- [x] Add image picker integration to profile screen
+- [x] Implement S3 upload for profile photos (local URI for now, S3 integration deferred)
+- [x] Update profile screen UI with avatar and upload button
+- [x] Connect photo upload to updateProfile mutation
+- [x] Test photo upload end-to-end

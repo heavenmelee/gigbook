@@ -13,6 +13,9 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { trpc } from "@/lib/trpc";
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
+import { Alert, ActivityIndicator } from "react-native";
 
 interface MenuItem {
   id: string;
@@ -30,10 +33,12 @@ interface ChecklistItem {
 
 export default function ProfileScreen() {
   const colors = useColors();
+  const [uploading, setUploading] = useState(false);
 
   // Fetch profile data
-  const { data: profile } = trpc.musician.getProfile.useQuery();
+  const { data: profile, refetch: refetchProfile } = trpc.musician.getProfile.useQuery();
   const { data: packages } = trpc.musician.getPackages.useQuery();
+  const updateProfileMutation = trpc.musician.updateProfile.useMutation();
 
   // Calculate profile strength
   const calculateProfileStrength = () => {
@@ -90,6 +95,39 @@ export default function ProfileScreen() {
     { id: "help", title: "Help & Disputes", icon: "exclamationmark.triangle.fill", route: "/(musician)/help" },
   ];
 
+  const handlePhotoUpload = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploading(true);
+        const asset = result.assets[0];
+        const photoUrl = asset.uri;
+        
+        // Update profile with new photo
+        await updateProfileMutation.mutateAsync({
+          coverPhoto: photoUrl,
+        });
+        
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        Alert.alert("Berjaya", "Foto profil telah dikemaskini");
+        await refetchProfile();
+      }
+    } catch (error: any) {
+      console.error("Photo upload error:", error);
+      Alert.alert("Ralat", "Gagal memuat naik foto");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleMenuPress = (item: MenuItem) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -136,19 +174,35 @@ export default function ProfileScreen() {
         {/* ==================== HEADER ==================== */}
         <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <View style={s.profileInfo}>
-            <View style={[s.photoContainer, { borderColor: colors.border }]}>
-              <Image
-                source={{
-                  uri: profile?.coverPhoto || "https://via.placeholder.com/100",
-                }}
-                style={s.photo}
-              />
+            <TouchableOpacity
+              style={[s.photoContainer, { borderColor: colors.border }]}
+              onPress={handlePhotoUpload}
+              disabled={uploading}
+              activeOpacity={0.7}
+            >
+              {uploading ? (
+                <View style={[s.photo, { justifyContent: "center", alignItems: "center", backgroundColor: colors.muted }]}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              ) : (
+                <>
+                  <Image
+                    source={{
+                      uri: profile?.coverPhoto || "https://via.placeholder.com/100",
+                    }}
+                    style={s.photo}
+                  />
+                  <View style={[s.uploadOverlay, { backgroundColor: "rgba(0,0,0,0.3)" }]}>
+                    <IconSymbol name="camera.fill" size={24} color="#fff" />
+                  </View>
+                </>
+              )}
               {profile?.verified && (
                 <View style={[s.verifiedBadge, { backgroundColor: colors.success }]}>
                   <IconSymbol name="checkmark.circle.fill" size={16} color="#fff" />
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
             <View style={s.profileText}>
               <View style={s.nameRow}>
                 <Text style={[s.stageName, { color: colors.foreground }]}>
@@ -302,6 +356,14 @@ const s = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  uploadOverlay: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 38,
   },
   profileText: {
     flex: 1,

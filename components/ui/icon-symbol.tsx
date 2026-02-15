@@ -52,6 +52,7 @@ const MAPPING = {
   "pause.circle.fill": "pause-circle-filled",
   "trash.fill": "delete",
   "arrow.up.circle.fill": "arrow-upward",
+  "camera.fill": "camera-alt",
 } as const satisfies IconMapping;
 
 /**
