@@ -62,6 +62,19 @@ const MAPPING = {
   "gift": "card-giftcard",
   "plus.circle": "add-circle-outline",
   "doc.text": "description",
+  "bubble.left.fill": "chat",
+  "heart.fill": "favorite",
+  "map.fill": "map",
+  "arrow.right": "arrow-forward",
+  "play.circle.fill": "play-circle-filled",
+  "photo.fill": "photo",
+  "square.and.arrow.up": "share",
+  "questionmark.circle.fill": "help",
+  "shield.fill": "security",
+  "receipt": "receipt",
+  "bookmark.fill": "bookmark",
+  "car.fill": "directions-car",
+  "person.crop.circle": "account-circle",
 } as const satisfies IconMapping;
 
 /**

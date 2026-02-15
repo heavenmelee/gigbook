@@ -1,14 +1,6 @@
 import {
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Platform,
-  Alert,
-  FlatList,
-  ActivityIndicator,
+  Text, View, ScrollView, TouchableOpacity, StyleSheet, Image,
+  Platform, ActivityIndicator, Alert, Share,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -17,420 +9,225 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { trpc } from "@/lib/trpc";
 
-interface Package {
-  id: string;
-  name: string;
-  duration: string;
-  price: number;
-  inclusions: string[];
-}
-
 export default function MusicianProfileScreen() {
   const colors = useColors();
-  const { id } = useLocalSearchParams();
-  const musicianId = parseInt(id as string) || 1;
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const tap = () => { if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); };
 
-  // Fetch musician profile - using browse.getMusicians as fallback since getMusicianById might not exist
-  const getAllMusiciansQuery = trpc.browse.getMusicians.useQuery({
-    genre: undefined,
-    location: undefined,
-    search: undefined,
-  });
-
-  // Find the specific musician from the list
-  const musician = getAllMusiciansQuery.data?.find((m: any) => (m.profile?.id || m.id) === musicianId)?.profile || {
-    id: musicianId,
-    stageName: "Loading...",
-    coverPhoto: "https://via.placeholder.com/300",
-    rating: 0,
-    totalReviews: 0,
-    verified: false,
-    bio: "Loading musician profile...",
-  };
-
-  // Mock packages (would come from API in production)
-  const mockPackages: Package[] = [
-    {
-      id: "1",
-      name: "Standard",
-      duration: "2 hours",
-      price: 800,
-      inclusions: ["4 musicians", "Sound system", "Setup & soundcheck"],
-    },
-    {
-      id: "2",
-      name: "Premium",
-      duration: "3 hours",
-      price: 1200,
-      inclusions: ["4 musicians", "Sound system", "MC services", "Custom setlist"],
-    },
-    {
-      id: "3",
-      name: "Deluxe",
-      duration: "4 hours",
-      price: 1800,
-      inclusions: ["6 musicians", "Premium sound", "MC services", "Custom setlist", "Backup band"],
-    },
-  ];
-
-  const reviews = [
-    {
-      id: "1",
-      name: "Sarah",
-      rating: 5,
-      text: "Amazing performance! Highly recommended!",
-    },
-    {
-      id: "2",
-      name: "Mike",
-      rating: 5,
-      text: "Professional and talented. Made our wedding perfect.",
-    },
-  ];
-
-  const handleSelectPackage = (packageId: string) => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push(`/(customer)/create-booking?musicianId=${musicianId}&packageId=${packageId}`);
-  };
-
-  const handleMessage = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    Alert.alert("Message", "Opening chat with " + musician.stageName);
-  };
-
-  const handleShare = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    Alert.alert("Share", "Sharing musician profile");
-  };
-
-  const renderPackage = ({ item }: { item: Package }) => (
-    <View style={[s.packageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={s.packageHeader}>
-        <View>
-          <Text style={[s.packageName, { color: colors.foreground }]}>{item.name}</Text>
-          <Text style={[s.packageDuration, { color: colors.muted }]}>{item.duration}</Text>
-        </View>
-        <Text style={[s.packagePrice, { color: colors.primary }]}>RM {item.price}</Text>
-      </View>
-      <View style={s.inclusions}>
-        {item.inclusions.map((inclusion, idx) => (
-          <View key={idx} style={s.inclusionRow}>
-            <IconSymbol name="checkmark.circle.fill" size={14} color={colors.success} />
-            <Text style={[s.inclusionText, { color: colors.foreground }]}>{inclusion}</Text>
-          </View>
-        ))}
-      </View>
-      <TouchableOpacity
-        style={[s.selectButton, { backgroundColor: colors.primary }]}
-        onPress={() => handleSelectPackage(item.id)}
-        activeOpacity={0.8}
-      >
-        <Text style={s.selectButtonText}>Select package</Text>
-      </TouchableOpacity>
-    </View>
+  const profileQuery = trpc.browse.getMusicianById.useQuery(
+    { id: Number(id) },
+    { enabled: !!id }
   );
 
-  const renderReview = ({ item }: { item: any }) => (
-    <View style={[s.reviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={s.reviewHeader}>
-        <Text style={[s.reviewName, { color: colors.foreground }]}>{item.name}</Text>
-        <View style={s.ratingRow}>
-          {[...Array(item.rating)].map((_, i) => (
-            <IconSymbol key={i} name="star.fill" size={14} color={colors.warning} />
-          ))}
-        </View>
-      </View>
-      <Text style={[s.reviewText, { color: colors.muted }]}>{item.text}</Text>
-    </View>
-  );
+  const data = profileQuery.data;
+  const profile = data?.profile;
+  const listings = data?.listings || [];
+  const reviews = data?.reviews || [];
 
-  if (getAllMusiciansQuery.isLoading) {
+  if (profileQuery.isLoading) {
     return (
-      <ScreenContainer className="flex items-center justify-center">
+      <ScreenContainer className="flex-1 items-center justify-center">
         <ActivityIndicator size="large" color={colors.primary} />
       </ScreenContainer>
     );
   }
 
+  if (!profile) {
+    return (
+      <ScreenContainer className="flex-1 items-center justify-center p-6">
+        <Text style={[s.emptyText, { color: colors.muted }]}>Musician not found</Text>
+        <TouchableOpacity style={[s.backBtn, { backgroundColor: colors.primary }]} onPress={() => router.back()}>
+          <Text style={s.backBtnText}>Go back</Text>
+        </TouchableOpacity>
+      </ScreenContainer>
+    );
+  }
+
+  const handleShare = async () => {
+    tap();
+    try { await Share.share({ message: `Check out ${profile.stageName} on Gigbook!` }); } catch {}
+  };
+
+  const handleMessage = () => {
+    tap();
+    Alert.alert("Message", `Start a conversation with ${profile.stageName}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Message", onPress: () => router.push("/(customer)/messages") },
+    ]);
+  };
+
+  const handleSelectPackage = (pkg: any) => {
+    tap();
+    router.push(`/(customer)/create-booking?musicianId=${profile.id}&packageId=${pkg.id}`);
+  };
+
+  const handleRequestQuote = () => {
+    tap();
+    router.push(`/(customer)/create-booking?musicianId=${profile.id}`);
+  };
+
   return (
-    <ScreenContainer className="p-0">
-      <ScrollView
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: colors.background }}
-      >
-        {/* ==================== HEADER ==================== */}
-        <View style={s.headerContainer}>
-          <TouchableOpacity
-            style={[s.backButton, { backgroundColor: colors.surface }]}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
-          </TouchableOpacity>
-          <Image source={{ uri: musician.coverPhoto || "https://via.placeholder.com/300" }} style={s.musicianPhoto} />
+    <ScreenContainer className="p-0" edges={["top", "left", "right"]}>
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Back button */}
+        <TouchableOpacity style={[s.backArrow, { backgroundColor: colors.surface }]} onPress={() => { tap(); router.back(); }}>
+          <IconSymbol name="arrow.left" size={22} color={colors.foreground} />
+        </TouchableOpacity>
+
+        {/* Header */}
+        <View style={[s.headerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.avatar, { backgroundColor: colors.primary }]}>
+            {profile.coverPhoto ? (
+              <Image source={{ uri: profile.coverPhoto }} style={s.avatarImg} />
+            ) : (
+              <Text style={s.avatarInitial}>{(profile.stageName || "M")[0].toUpperCase()}</Text>
+            )}
+          </View>
+          <Text style={[s.stageName, { color: colors.foreground }]}>{profile.stageName}</Text>
+          {profile.verified ? (
+            <View style={[s.badge, { backgroundColor: colors.success + "20" }]}>
+              <IconSymbol name="checkmark.circle.fill" size={14} color={colors.success} />
+              <Text style={[s.badgeText, { color: colors.success }]}>Verified</Text>
+            </View>
+          ) : null}
+          <View style={s.ratingRow}>
+            <IconSymbol name="star.fill" size={18} color={colors.warning} />
+            <Text style={[s.ratingNum, { color: colors.foreground }]}> {Number(profile.rating || 0).toFixed(1)}</Text>
+            <Text style={[s.reviewsCount, { color: colors.muted }]}> ({profile.totalReviews || 0} reviews)</Text>
+          </View>
+          {profile.genre ? <Text style={[s.genre, { color: colors.muted }]}>{profile.genre}</Text> : null}
+          {profile.location ? (
+            <View style={s.locationRow}>
+              <IconSymbol name="location.fill" size={14} color={colors.muted} />
+              <Text style={[s.locationText, { color: colors.muted }]}> {profile.location}</Text>
+            </View>
+          ) : null}
+          <View style={s.quickBtns}>
+            <TouchableOpacity style={[s.quickBtn, { backgroundColor: colors.primary }]} onPress={handleMessage}>
+              <IconSymbol name="bubble.left.fill" size={18} color="#fff" />
+              <Text style={s.quickBtnText}>Message</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.quickBtnOutline, { borderColor: colors.border }]} onPress={handleShare}>
+              <IconSymbol name="square.and.arrow.up" size={18} color={colors.foreground} />
+              <Text style={[s.quickBtnTextDark, { color: colors.foreground }]}>Share</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={s.content}>
-          {/* ==================== INFO ==================== */}
-          <View style={s.infoSection}>
-            <View style={s.nameRatingRow}>
-              <View style={s.nameColumn}>
-                <View style={s.nameRow}>
-                  <Text style={[s.stageName, { color: colors.foreground }]}>{musician.stageName || "Musician"}</Text>
-                  {musician.verified && (
-                    <View style={[s.verifiedBadge, { backgroundColor: colors.success }]}>
-                      <IconSymbol name="checkmark.circle.fill" size={16} color="#fff" />
+        {/* Bio */}
+        {profile.bio ? (
+          <View style={[s.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.sectionTitle, { color: colors.foreground }]}>About</Text>
+            <Text style={[s.bioText, { color: colors.muted }]}>{profile.bio}</Text>
+          </View>
+        ) : null}
+
+        {/* Packages */}
+        <View style={[s.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.foreground }]}>Packages</Text>
+          {listings.length > 0 ? listings.map((pkg: any) => (
+            <View key={pkg.id} style={[s.packageCard, { borderColor: colors.border }]}>
+              <Text style={[s.pkgName, { color: colors.foreground }]}>{pkg.name}</Text>
+              <Text style={[s.pkgDuration, { color: colors.muted }]}>{pkg.duration} hours</Text>
+              {pkg.inclusions && Array.isArray(pkg.inclusions) && pkg.inclusions.length > 0 && (
+                <View style={s.inclusionsList}>
+                  {pkg.inclusions.map((inc: string, idx: number) => (
+                    <View key={idx} style={s.inclusionRow}>
+                      <IconSymbol name="checkmark.circle.fill" size={14} color={colors.success} />
+                      <Text style={[s.inclusionText, { color: colors.foreground }]}>{inc}</Text>
                     </View>
-                  )}
+                  ))}
                 </View>
-                <View style={s.ratingRow}>
-                  <IconSymbol name="star.fill" size={16} color={colors.warning} />
-                  <Text style={[s.rating, { color: colors.foreground }]}>
-                    {typeof musician.rating === 'number' ? musician.rating.toFixed(1) : '0.0'}
-                  </Text>
-                  <Text style={[s.reviews, { color: colors.muted }]}>({musician.totalReviews || 0} reviews)</Text>
-                </View>
+              )}
+              <View style={s.pkgFooter}>
+                <Text style={[s.pkgPrice, { color: colors.primary }]}>RM {pkg.basePrice}</Text>
+                <TouchableOpacity style={[s.selectBtn, { backgroundColor: colors.primary }]} onPress={() => handleSelectPackage(pkg)}>
+                  <Text style={s.selectBtnText}>Select package</Text>
+                </TouchableOpacity>
               </View>
             </View>
-            <Text style={[s.bio, { color: colors.muted }]}>
-              {musician.bio || "Professional musician with years of experience."}
-            </Text>
-          </View>
-
-          {/* ==================== ACTION BUTTONS ==================== */}
-          <View style={s.actionButtons}>
-            <TouchableOpacity
-              style={[s.actionButton, { backgroundColor: colors.primary }]}
-              onPress={handleMessage}
-              activeOpacity={0.8}
-            >
-              <IconSymbol name="paperplane.fill" size={18} color="#fff" />
-              <Text style={s.actionButtonText}>Message</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.actionButton, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
-              onPress={handleShare}
-              activeOpacity={0.8}
-            >
-              <IconSymbol name="paperplane.fill" size={18} color={colors.primary} />
-              <Text style={[s.actionButtonText, { color: colors.primary }]}>Share</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ==================== PACKAGES ==================== */}
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Packages</Text>
-            <FlatList
-              data={mockPackages}
-              renderItem={renderPackage}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              contentContainerStyle={s.packagesList}
-            />
-          </View>
-
-          {/* ==================== REVIEWS ==================== */}
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <Text style={[s.sectionTitle, { color: colors.foreground }]}>Reviews</Text>
-              <TouchableOpacity onPress={() => Alert.alert("All Reviews", "View all reviews")}>
-                <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={reviews}
-              renderItem={renderReview}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              contentContainerStyle={s.reviewsList}
-            />
-          </View>
+          )) : (
+            <Text style={[s.emptySection, { color: colors.muted }]}>No packages listed yet. Request a custom quote.</Text>
+          )}
         </View>
+
+        {/* Reviews */}
+        <View style={[s.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.foreground }]}>Reviews</Text>
+          {reviews.length > 0 ? reviews.slice(0, 3).map((rev: any) => (
+            <View key={rev.id} style={[s.reviewCard, { borderColor: colors.border }]}>
+              <View style={s.reviewHeader}>
+                <Text style={[s.reviewerName, { color: colors.foreground }]}>{rev.reviewerName || "Customer"}</Text>
+                <View style={s.reviewStars}>
+                  {[...Array(Math.min(rev.rating || 5, 5))].map((_, i) => (
+                    <IconSymbol key={i} name="star.fill" size={12} color={colors.warning} />
+                  ))}
+                </View>
+              </View>
+              {rev.comment ? <Text style={[s.reviewComment, { color: colors.muted }]}>{rev.comment}</Text> : null}
+            </View>
+          )) : (
+            <Text style={[s.emptySection, { color: colors.muted }]}>No reviews yet</Text>
+          )}
+        </View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Sticky CTA */}
+      <View style={[s.stickyCTA, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        <TouchableOpacity style={[s.ctaBtn, { backgroundColor: colors.primary }]} onPress={handleRequestQuote}>
+          <Text style={s.ctaBtnText}>Request a quote</Text>
+        </TouchableOpacity>
+      </View>
     </ScreenContainer>
   );
 }
 
 const s = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  headerContainer: {
-    position: "relative",
-    height: 300,
-  },
-  musicianPhoto: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#f0f0f0",
-  },
-  backButton: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  content: {
-    padding: 16,
-    gap: 20,
-  },
-  infoSection: {
-    gap: 12,
-  },
-  nameRatingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  nameColumn: {
-    flex: 1,
-    gap: 8,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  stageName: {
-    fontSize: 24,
-    fontWeight: "700",
-  },
-  verifiedBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  rating: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  reviews: {
-    fontSize: 14,
-  },
-  bio: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  actionButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  section: {
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  seeAll: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  packagesList: {
-    gap: 12,
-  },
-  packageCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 12,
-  },
-  packageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  packageName: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  packageDuration: {
-    fontSize: 12,
-  },
-  packagePrice: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  inclusions: {
-    gap: 6,
-  },
-  inclusionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  inclusionText: {
-    fontSize: 13,
-  },
-  selectButton: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  selectButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  reviewsList: {
-    gap: 12,
-  },
-  reviewCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 8,
-  },
-  reviewHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  reviewName: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  reviewText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
+  scrollContent: { paddingBottom: 24 },
+  backArrow: { position: "absolute", top: 8, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  headerCard: { marginHorizontal: 16, marginTop: 56, padding: 24, borderRadius: 16, borderWidth: 1, alignItems: "center" },
+  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  avatarImg: { width: 80, height: 80, borderRadius: 40 },
+  avatarInitial: { fontSize: 32, fontWeight: "700", color: "#fff" },
+  stageName: { fontSize: 22, fontWeight: "700", marginBottom: 6 },
+  badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginBottom: 8 },
+  badgeText: { fontSize: 12, fontWeight: "600" },
+  ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  ratingNum: { fontSize: 16, fontWeight: "600" },
+  reviewsCount: { fontSize: 14 },
+  genre: { fontSize: 14, marginBottom: 4 },
+  locationRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  locationText: { fontSize: 13 },
+  quickBtns: { flexDirection: "row", gap: 12, marginTop: 8 },
+  quickBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 },
+  quickBtnOutline: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, borderWidth: 1 },
+  quickBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  quickBtnTextDark: { fontSize: 14, fontWeight: "600" },
+  sectionCard: { marginHorizontal: 16, marginTop: 16, padding: 20, borderRadius: 16, borderWidth: 1 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 14 },
+  bioText: { fontSize: 14, lineHeight: 22 },
+  packageCard: { borderTopWidth: 0.5, paddingTop: 14, marginTop: 14 },
+  pkgName: { fontSize: 16, fontWeight: "600" },
+  pkgDuration: { fontSize: 13, marginTop: 2 },
+  inclusionsList: { marginTop: 8, gap: 4 },
+  inclusionRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  inclusionText: { fontSize: 13 },
+  pkgFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12 },
+  pkgPrice: { fontSize: 18, fontWeight: "700" },
+  selectBtn: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
+  selectBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  reviewCard: { borderTopWidth: 0.5, paddingTop: 12, marginTop: 12 },
+  reviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  reviewerName: { fontSize: 14, fontWeight: "600" },
+  reviewStars: { flexDirection: "row", gap: 2 },
+  reviewComment: { fontSize: 13, lineHeight: 20, marginTop: 6 },
+  emptySection: { fontSize: 14 },
+  stickyCTA: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 32, borderTopWidth: 0.5 },
+  ctaBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center" },
+  ctaBtnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  emptyText: { fontSize: 16, marginBottom: 16 },
+  backBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
+  backBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" },
 });

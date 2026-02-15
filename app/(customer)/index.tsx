@@ -16,382 +16,272 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { trpc } from "@/lib/trpc";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export default function CustomerHomeScreen() {
   const colors = useColors();
+  const [location] = useState("Kuala Lumpur");
 
-  // Fetch all musicians
-  const getMusiciansQuery = trpc.browse.getMusicians.useQuery({
+  // Fetch all musicians from API
+  const musiciansQuery = trpc.browse.getMusicians.useQuery({
     genre: undefined,
     location: undefined,
     search: undefined,
   });
 
-  // Normalize API response to consistent format
-  const normalizedMusicians = useMemo(() => {
-    if (!getMusiciansQuery.data) return [];
-    return getMusiciansQuery.data.map((m: any) => ({
+  // Normalize API data
+  const musicians = useMemo(() => {
+    if (!musiciansQuery.data) return [];
+    return musiciansQuery.data.map((m: any) => ({
       id: m.profile?.id || m.id,
       stageName: m.profile?.stageName || m.stageName || "Musician",
-      coverPhoto: m.profile?.coverPhoto,
-      rating: m.profile?.rating || 0,
+      coverPhoto: m.profile?.coverPhoto || null,
+      rating: Number(m.profile?.rating) || 0,
       totalReviews: m.profile?.totalReviews || 0,
       verified: m.profile?.verified || false,
-      genre: m.profile?.genre,
+      genre: m.profile?.genre || "",
+      location: m.profile?.location || "",
+      startingPrice: m.minPrice || null,
     }));
-  }, [getMusiciansQuery.data]);
+  }, [musiciansQuery.data]);
 
-  // Organize musicians by category
-  const topRatedMusicians = useMemo(() => {
-    return normalizedMusicians
-      .filter((m: any) => m.verified)
-      .sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0))
-      .slice(0, 3);
-  }, [normalizedMusicians]);
+  // Carousels
+  const topRated = useMemo(() => {
+    return [...musicians].sort((a, b) => b.rating - a.rating).slice(0, 10);
+  }, [musicians]);
 
   const weddingMusicians = useMemo(() => {
-    return normalizedMusicians
-      .filter((m: any) => m.verified && m.genre?.toLowerCase().includes("wedding"))
-      .slice(0, 2);
-  }, [normalizedMusicians]);
+    return musicians.filter((m) => m.genre?.toLowerCase().includes("wedding")).slice(0, 10);
+  }, [musicians]);
 
   const acousticMusicians = useMemo(() => {
-    return normalizedMusicians
-      .filter((m: any) => m.verified && (m.genre?.toLowerCase().includes("acoustic") || m.genre?.toLowerCase().includes("chill")))
-      .slice(0, 2);
-  }, [normalizedMusicians]);
+    return musicians.filter((m) =>
+      m.genre?.toLowerCase().includes("acoustic") || m.genre?.toLowerCase().includes("chill")
+    ).slice(0, 10);
+  }, [musicians]);
 
   const categories = ["Wedding", "Corporate", "Birthday", "Cafe/Restaurant", "Festival"];
 
-  const handleStartBooking = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push("/(customer)/explore");
+  const tap = () => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const handleViewMusician = (musicianId: number) => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push(`/(customer)/musician-profile?id=${musicianId}`);
+  const handleViewMusician = (id: number) => {
+    tap();
+    router.push(`/(customer)/musician-profile?id=${id}`);
   };
 
-  const handleSearch = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push("/(customer)/explore");
-  };
-
-  const renderMusicianCard = ({ item }: { item: any }) => (
+  // ==================== MUSICIAN CARD ====================
+  const renderMusicianCard = ({ item }: { item: (typeof musicians)[0] }) => (
     <TouchableOpacity
       style={[s.musicianCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={() => handleViewMusician(item.id)}
       activeOpacity={0.7}
     >
-      <Image
-        source={{ uri: item.coverPhoto || "https://via.placeholder.com/200" }}
-        style={s.musicianPhoto}
-      />
-      {item.verified && (
-        <View style={[s.verifiedBadge, { backgroundColor: colors.success }]}>
-          <IconSymbol name="checkmark.circle.fill" size={14} color="#fff" />
-        </View>
-      )}
-      <View style={s.musicianInfo}>
-        <Text style={[s.stageName, { color: colors.foreground }]} numberOfLines={1}>
-          {item.stageName}
-        </Text>
+      <View style={[s.musicianPhoto, { backgroundColor: colors.border }]}>
+        {item.coverPhoto ? (
+          <Image source={{ uri: item.coverPhoto }} style={s.musicianPhotoImg} />
+        ) : (
+          <View style={[s.photoPlaceholder, { backgroundColor: colors.primary }]}>
+            <Text style={s.photoInitial}>{(item.stageName || "M")[0].toUpperCase()}</Text>
+          </View>
+        )}
+        {item.verified && (
+          <View style={[s.verifiedBadge, { backgroundColor: colors.success }]}>
+            <IconSymbol name="checkmark" size={10} color="#fff" />
+          </View>
+        )}
+      </View>
+      <View style={s.cardBody}>
+        <Text style={[s.cardName, { color: colors.foreground }]} numberOfLines={1}>{item.stageName}</Text>
         <View style={s.ratingRow}>
-          <IconSymbol name="star.fill" size={14} color={colors.warning} />
-          <Text style={[s.rating, { color: colors.foreground }]}>
-            {(item.rating || 0).toFixed(1)}
-          </Text>
-          <Text style={[s.reviews, { color: colors.muted }]}>({item.totalReviews || 0})</Text>
+          <IconSymbol name="star.fill" size={13} color={colors.warning} />
+          <Text style={[s.ratingText, { color: colors.foreground }]}> {item.rating.toFixed(1)}</Text>
+          <Text style={[s.reviewCount, { color: colors.muted }]}> ({item.totalReviews})</Text>
         </View>
-        <Text style={[s.price, { color: colors.primary }]}>View profile</Text>
+        {item.startingPrice ? (
+          <Text style={[s.priceText, { color: colors.primary }]}>from RM {item.startingPrice}</Text>
+        ) : (
+          <Text style={[s.priceText, { color: colors.muted }]}>View profile</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
 
-  if (getMusiciansQuery.isLoading) {
+  // ==================== LOADING ====================
+  if (musiciansQuery.isLoading) {
     return (
-      <ScreenContainer className="flex items-center justify-center">
+      <ScreenContainer className="flex-1 items-center justify-center">
         <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[s.loadingText, { color: colors.muted }]}>Loading musicians...</Text>
       </ScreenContainer>
     );
   }
 
   return (
     <ScreenContainer className="p-0">
-      <ScrollView
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: colors.background }}
-      >
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ==================== HEADER ==================== */}
-        <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <View style={s.locationRow}>
-            <IconSymbol name="location.fill" size={16} color={colors.primary} />
-            <Text style={[s.location, { color: colors.foreground }]}>Kuala Lumpur</Text>
+        <View style={[s.header, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={s.locationRow} onPress={() => { tap(); }}>
+            <IconSymbol name="location.fill" size={18} color={colors.primary} />
+            <Text style={[s.locationText, { color: colors.foreground }]}>{location}</Text>
             <IconSymbol name="chevron.down" size={16} color={colors.muted} />
-          </View>
+          </TouchableOpacity>
         </View>
 
-        <View style={s.content}>
-          {/* ==================== SEARCH BAR ==================== */}
+        {/* ==================== SEARCH BAR ==================== */}
+        <TouchableOpacity
+          style={[s.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => { tap(); router.push("/(customer)/explore"); }}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="magnifyingglass" size={20} color={colors.muted} />
+          <Text style={[s.searchPlaceholder, { color: colors.muted }]}>Search musicians, genres, events</Text>
+        </TouchableOpacity>
+
+        {/* ==================== HERO CARD ==================== */}
+        <View style={[s.heroCard, { backgroundColor: colors.primary }]}>
+          <Text style={s.heroTitle}>Book a musician in minutes</Text>
+          <Text style={s.heroSubtitle}>Find the perfect live music for your event</Text>
           <TouchableOpacity
-            style={[s.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={handleSearch}
-            activeOpacity={0.7}
+            style={[s.heroCTA, { backgroundColor: "#fff" }]}
+            onPress={() => { tap(); router.push("/(customer)/explore"); }}
+            activeOpacity={0.8}
           >
-            <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
-            <Text style={[s.searchPlaceholder, { color: colors.muted }]}>
-              Search musicians, genres, events
-            </Text>
+            <Text style={[s.heroCTAText, { color: colors.primary }]}>Start booking</Text>
           </TouchableOpacity>
+        </View>
 
-          {/* ==================== HERO CARD ==================== */}
-          <View style={[s.heroCard, { backgroundColor: colors.primary }]}>
-            <Text style={s.heroTitle}>Book a musician in minutes</Text>
-            <Text style={s.heroSubtitle}>Find the perfect entertainment for your event</Text>
-            <TouchableOpacity
-              style={[s.heroButton, { backgroundColor: "#fff" }]}
-              onPress={handleStartBooking}
-              activeOpacity={0.8}
-            >
-              <Text style={[s.heroButtonText, { color: colors.primary }]}>Start booking</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ==================== CATEGORIES ==================== */}
+        <View style={s.section}>
+          <FlatList
+            data={categories}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.chipRow}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[s.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => { tap(); router.push(`/(customer)/explore?category=${item}`); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.chipText, { color: colors.foreground }]}>{item}</Text>
+              </TouchableOpacity>
+            )}
+            keyExtractor={(item) => item}
+          />
+        </View>
 
-          {/* ==================== CATEGORIES ==================== */}
+        {/* ==================== TOP RATED ==================== */}
+        {topRated.length > 0 && (
           <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Event type</Text>
+            <View style={s.sectionHeader}>
+              <Text style={[s.sectionTitle, { color: colors.foreground }]}>Top rated near you</Text>
+              <TouchableOpacity onPress={() => { tap(); router.push("/(customer)/explore"); }}>
+                <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
+              </TouchableOpacity>
+            </View>
             <FlatList
-              data={categories}
+              data={topRated}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.categoriesContainer}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[s.categoryChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={() => router.push("/(customer)/explore")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.categoryText, { color: colors.foreground }]}>{item}</Text>
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item}
+              contentContainerStyle={s.carouselPad}
+              renderItem={renderMusicianCard}
+              keyExtractor={(item) => `top-${item.id}`}
             />
           </View>
+        )}
 
-          {/* ==================== TOP RATED CAROUSEL ==================== */}
-          {topRatedMusicians.length > 0 && (
-            <View style={s.section}>
-              <View style={s.sectionHeader}>
-                <Text style={[s.sectionTitle, { color: colors.foreground }]}>Top rated near you</Text>
-                <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
-                  <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={topRatedMusicians}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.carouselContainer}
-                renderItem={renderMusicianCard}
-                keyExtractor={(item) => item.id.toString()}
-                scrollEnabled={true}
-              />
+        {/* ==================== BEST FOR WEDDINGS ==================== */}
+        {weddingMusicians.length > 0 && (
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={[s.sectionTitle, { color: colors.foreground }]}>Best for weddings</Text>
+              <TouchableOpacity onPress={() => { tap(); router.push("/(customer)/explore"); }}>
+                <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
+              </TouchableOpacity>
             </View>
-          )}
+            <FlatList
+              data={weddingMusicians}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.carouselPad}
+              renderItem={renderMusicianCard}
+              keyExtractor={(item) => `wed-${item.id}`}
+            />
+          </View>
+        )}
 
-          {/* ==================== BEST FOR WEDDINGS ==================== */}
-          {weddingMusicians.length > 0 && (
-            <View style={s.section}>
-              <View style={s.sectionHeader}>
-                <Text style={[s.sectionTitle, { color: colors.foreground }]}>Best for weddings</Text>
-                <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
-                  <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={weddingMusicians}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.carouselContainer}
-                renderItem={renderMusicianCard}
-                keyExtractor={(item) => item.id.toString()}
-                scrollEnabled={true}
-              />
+        {/* ==================== ACOUSTIC & CHILL ==================== */}
+        {acousticMusicians.length > 0 && (
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={[s.sectionTitle, { color: colors.foreground }]}>Acoustic & chill</Text>
+              <TouchableOpacity onPress={() => { tap(); router.push("/(customer)/explore"); }}>
+                <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
+              </TouchableOpacity>
             </View>
-          )}
+            <FlatList
+              data={acousticMusicians}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.carouselPad}
+              renderItem={renderMusicianCard}
+              keyExtractor={(item) => `aco-${item.id}`}
+            />
+          </View>
+        )}
 
-          {/* ==================== ACOUSTIC & CHILL ==================== */}
-          {acousticMusicians.length > 0 && (
-            <View style={s.section}>
-              <View style={s.sectionHeader}>
-                <Text style={[s.sectionTitle, { color: colors.foreground }]}>Acoustic & chill</Text>
-                <TouchableOpacity onPress={() => router.push("/(customer)/explore")}>
-                  <Text style={[s.seeAll, { color: colors.primary }]}>See all</Text>
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={acousticMusicians}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.carouselContainer}
-                renderItem={renderMusicianCard}
-                keyExtractor={(item) => item.id.toString()}
-                scrollEnabled={true}
-              />
-            </View>
-          )}
-        </View>
+        {/* ==================== EMPTY STATE ==================== */}
+        {musicians.length === 0 && !musiciansQuery.isLoading && (
+          <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <IconSymbol name="music.note" size={40} color={colors.muted} />
+            <Text style={[s.emptyTitle, { color: colors.foreground }]}>No musicians available yet</Text>
+            <Text style={[s.emptySubtitle, { color: colors.muted }]}>Set your event date to get started</Text>
+          </View>
+        )}
+
+        <View style={{ height: 32 }} />
       </ScrollView>
     </ScreenContainer>
   );
 }
 
 const s = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  location: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  content: {
-    padding: 16,
-    gap: 20,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 8,
-  },
-  searchPlaceholder: {
-    fontSize: 14,
-    flex: 1,
-  },
-  heroCard: {
-    borderRadius: 12,
-    padding: 20,
-    gap: 8,
-  },
-  heroTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
-  },
-  heroButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  heroButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  section: {
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  seeAll: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  categoriesContainer: {
-    gap: 8,
-    paddingRight: 16,
-  },
-  categoryChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  carouselContainer: {
-    gap: 12,
-    paddingRight: 16,
-  },
-  musicianCard: {
-    width: 160,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  musicianPhoto: {
-    width: "100%",
-    height: 120,
-    backgroundColor: "#f0f0f0",
-  },
-  verifiedBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  musicianInfo: {
-    padding: 10,
-    gap: 6,
-  },
-  stageName: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  rating: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  reviews: {
-    fontSize: 12,
-  },
-  price: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
+  scrollContent: { paddingBottom: 24 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 0.5 },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  locationText: { fontSize: 16, fontWeight: "600" },
+  searchBar: { flexDirection: "row", alignItems: "center", marginHorizontal: 20, marginTop: 16, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, borderWidth: 1, gap: 10 },
+  searchPlaceholder: { fontSize: 15, flex: 1 },
+  heroCard: { marginHorizontal: 20, marginTop: 16, borderRadius: 16, padding: 24 },
+  heroTitle: { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 6 },
+  heroSubtitle: { fontSize: 14, color: "rgba(255,255,255,0.85)", marginBottom: 18 },
+  heroCTA: { alignSelf: "flex-start", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
+  heroCTAText: { fontSize: 15, fontWeight: "600" },
+  section: { marginTop: 24 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: "700" },
+  seeAll: { fontSize: 14, fontWeight: "600" },
+  chipRow: { paddingHorizontal: 20, gap: 10 },
+  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1 },
+  chipText: { fontSize: 14, fontWeight: "500" },
+  carouselPad: { paddingHorizontal: 20, gap: 12 },
+  musicianCard: { width: 160, borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  musicianPhoto: { width: "100%", height: 110 },
+  musicianPhotoImg: { width: "100%", height: "100%" },
+  photoPlaceholder: { width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
+  photoInitial: { fontSize: 32, fontWeight: "700", color: "#fff" },
+  verifiedBadge: { position: "absolute", top: 8, right: 8, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  cardBody: { padding: 10, gap: 3 },
+  cardName: { fontSize: 14, fontWeight: "600" },
+  ratingRow: { flexDirection: "row", alignItems: "center" },
+  ratingText: { fontSize: 13, fontWeight: "500" },
+  reviewCount: { fontSize: 12 },
+  priceText: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+  emptyCard: { marginHorizontal: 20, marginTop: 24, padding: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", gap: 8 },
+  emptyTitle: { fontSize: 16, fontWeight: "600" },
+  emptySubtitle: { fontSize: 14, textAlign: "center" },
+  loadingText: { marginTop: 12, fontSize: 14 },
 });

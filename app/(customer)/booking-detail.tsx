@@ -1,12 +1,5 @@
 import {
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Platform,
-  Alert,
+  Text, View, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Linking,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -16,217 +9,163 @@ import { router, useLocalSearchParams } from "expo-router";
 
 export default function BookingDetailScreen() {
   const colors = useColors();
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const tap = () => { if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); };
 
-  // Mock data
   const booking = {
-    id: id || "1",
-    musicianName: "Jazz Quartet",
-    musicianPhoto: "https://via.placeholder.com/80",
-    date: "Saturday, February 22, 2025",
-    time: "8:00 PM",
-    location: "Grand Ballroom, Kuala Lumpur",
-    status: "confirmed",
-    package: "Premium",
+    id,
+    musicianName: "Rani",
+    musicianInitial: "R",
+    status: "confirmed" as const,
+    statusLabel: "Confirmed",
+    date: "Saturday, 22 February 2026",
+    time: "8:00 PM - 11:00 PM",
+    location: "The Grand Ballroom, Mont Kiara",
+    address: "Jalan Kiara 3, Mont Kiara, 50480 Kuala Lumpur",
+    package: "Wedding Acoustic",
     duration: "3 hours",
-    price: 2400,
-    deposit: 600,
-    paymentStatus: "Deposit paid",
-    cancellationPolicy: "Free cancellation up to 7 days before event",
+    inclusions: ["2 sets of 45 minutes", "Sound system included", "Song request (up to 5 songs)", "MC services"],
+    basePrice: 1200,
+    addOns: [{ name: "Extra set (45 min)", price: 300 }],
+    deposit: 500,
+    depositPaid: true,
+    balance: 1000,
+    total: 1500,
+    notes: "Please arrive 30 minutes early for setup. Parking available at B2.",
   };
 
-  const handleMessage = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push(`/(customer)/chat?id=${booking.id}`);
-  };
+  const statusColor = booking.status === "confirmed" ? colors.success : colors.warning;
 
+  const handleMessage = () => { tap(); router.push(`/(customer)/chat?threadId=${booking.id}&name=${booking.musicianName}`); };
   const handleNavigate = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    Alert.alert("Navigate", "Opening maps to " + booking.location);
+    tap();
+    Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(booking.address)}`);
   };
-
-  const handleCall = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    Alert.alert("Call", "Calling " + booking.musicianName);
+  const handleReport = () => {
+    tap();
+    Alert.alert("Report Issue", "What would you like to report?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Musician didn't show up", onPress: () => Alert.alert("Reported", "We'll investigate and get back to you within 24 hours.") },
+      { text: "Quality issue", onPress: () => Alert.alert("Reported", "We'll investigate and get back to you within 24 hours.") },
+      { text: "Other", onPress: () => Alert.alert("Reported", "We'll investigate and get back to you within 24 hours.") },
+    ]);
   };
 
   return (
-    <ScreenContainer className="p-0">
-      <ScrollView
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: colors.background }}
-      >
-        {/* ==================== HEADER ==================== */}
-        <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            style={s.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
+    <ScreenContainer className="p-0" edges={["top", "left", "right"]}>
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={s.topBar}>
+          <TouchableOpacity style={[s.backBtn, { backgroundColor: colors.surface }]} onPress={() => { tap(); router.back(); }}>
+            <IconSymbol name="arrow.left" size={20} color={colors.foreground} />
           </TouchableOpacity>
-          <Text style={[s.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
+          <Text style={[s.topTitle, { color: colors.foreground }]}>Booking details</Text>
           <View style={{ width: 40 }} />
         </View>
 
-        <View style={s.content}>
-          {/* ==================== STATUS CARD ==================== */}
-          <View style={[s.statusCard, { backgroundColor: colors.success + "15", borderColor: colors.success }]}>
-            <View style={s.statusRow}>
-              <IconSymbol name="checkmark.circle.fill" size={24} color={colors.success} />
-              <View style={s.statusText}>
-                <Text style={[s.statusTitle, { color: colors.success }]}>Confirmed</Text>
-                <Text style={[s.statusSubtitle, { color: colors.muted }]}>Event is confirmed</Text>
-              </View>
+        <View style={[s.statusCard, { backgroundColor: statusColor + "15", borderColor: statusColor + "30" }]}>
+          <View style={[s.statusDot, { backgroundColor: statusColor }]} />
+          <View style={s.statusInfo}>
+            <Text style={[s.statusLabel, { color: statusColor }]}>{booking.statusLabel}</Text>
+            <Text style={[s.statusSub, { color: colors.muted }]}>Booking #{booking.id}</Text>
+          </View>
+        </View>
+
+        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={s.cardRow}>
+            <View style={[s.avatar, { backgroundColor: colors.primary }]}>
+              <Text style={s.avatarText}>{booking.musicianInitial}</Text>
+            </View>
+            <View style={s.cardRowInfo}>
+              <Text style={[s.cardLabel, { color: colors.foreground }]}>{booking.musicianName}</Text>
+              <Text style={[s.cardSub, { color: colors.muted }]}>Musician</Text>
             </View>
           </View>
+        </View>
 
-          {/* ==================== MUSICIAN CARD ==================== */}
-          <View style={[s.musicianCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={s.musicianRow}>
-              <Image source={{ uri: booking.musicianPhoto }} style={s.musicianPhoto} />
-              <View style={s.musicianInfo}>
-                <Text style={[s.musicianName, { color: colors.foreground }]}>{booking.musicianName}</Text>
-                <Text style={[s.musicianRole, { color: colors.muted }]}>Professional musicians</Text>
-              </View>
+        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.foreground }]}>Where & when</Text>
+          <View style={s.detailRow}>
+            <IconSymbol name="calendar" size={18} color={colors.primary} />
+            <View style={s.detailInfo}>
+              <Text style={[s.detailLabel, { color: colors.foreground }]}>{booking.date}</Text>
+              <Text style={[s.detailSub, { color: colors.muted }]}>{booking.time}</Text>
             </View>
           </View>
-
-          {/* ==================== EVENT DETAILS ==================== */}
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Where & When</Text>
-            <View style={[s.detailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={s.detailRow}>
-                <View style={[s.detailIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="calendar" size={18} color={colors.primary} />
-                </View>
-                <View style={s.detailText}>
-                  <Text style={[s.detailLabel, { color: colors.muted }]}>Date</Text>
-                  <Text style={[s.detailValue, { color: colors.foreground }]}>{booking.date}</Text>
-                </View>
-              </View>
-              <View style={[s.divider, { backgroundColor: colors.border }]} />
-              <View style={s.detailRow}>
-                <View style={[s.detailIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="clock.fill" size={18} color={colors.primary} />
-                </View>
-                <View style={s.detailText}>
-                  <Text style={[s.detailLabel, { color: colors.muted }]}>Time</Text>
-                  <Text style={[s.detailValue, { color: colors.foreground }]}>{booking.time}</Text>
-                </View>
-              </View>
-              <View style={[s.divider, { backgroundColor: colors.border }]} />
-              <View style={s.detailRow}>
-                <View style={[s.detailIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="location.fill" size={18} color={colors.primary} />
-                </View>
-                <View style={s.detailText}>
-                  <Text style={[s.detailLabel, { color: colors.muted }]}>Location</Text>
-                  <Text style={[s.detailValue, { color: colors.foreground }]}>{booking.location}</Text>
-                </View>
-              </View>
+          <View style={s.detailRow}>
+            <IconSymbol name="location.fill" size={18} color={colors.primary} />
+            <View style={s.detailInfo}>
+              <Text style={[s.detailLabel, { color: colors.foreground }]}>{booking.location}</Text>
+              <Text style={[s.detailSub, { color: colors.muted }]}>{booking.address}</Text>
             </View>
           </View>
-
-          {/* ==================== PACKAGE DETAILS ==================== */}
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Package Details</Text>
-            <View style={[s.detailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={s.detailRow}>
-                <Text style={[s.detailLabel, { color: colors.muted }]}>Package</Text>
-                <Text style={[s.detailValue, { color: colors.foreground }]}>{booking.package}</Text>
-              </View>
-              <View style={[s.divider, { backgroundColor: colors.border }]} />
-              <View style={s.detailRow}>
-                <Text style={[s.detailLabel, { color: colors.muted }]}>Duration</Text>
-                <Text style={[s.detailValue, { color: colors.foreground }]}>{booking.duration}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* ==================== PAYMENT STATUS ==================== */}
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Payment Status</Text>
-            <View style={[s.paymentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={s.priceRow}>
-                <Text style={[s.priceLabel, { color: colors.muted }]}>Total Price</Text>
-                <Text style={[s.priceValue, { color: colors.foreground }]}>RM {booking.price}</Text>
-              </View>
-              <View style={[s.progressBar, { backgroundColor: colors.border }]}>
-                <View
-                  style={[
-                    s.progressFill,
-                    { backgroundColor: colors.success, width: "25%" },
-                  ]}
-                />
-              </View>
-              <View style={s.paymentDetails}>
-                <View style={s.paymentRow}>
-                  <Text style={[s.paymentLabel, { color: colors.muted }]}>Deposit Paid</Text>
-                  <Text style={[s.paymentAmount, { color: colors.success }]}>RM {booking.deposit}</Text>
-                </View>
-                <View style={s.paymentRow}>
-                  <Text style={[s.paymentLabel, { color: colors.muted }]}>Remaining</Text>
-                  <Text style={[s.paymentAmount, { color: colors.foreground }]}>
-                    RM {booking.price - booking.deposit}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* ==================== CANCELLATION POLICY ==================== */}
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Cancellation Policy</Text>
-            <View style={[s.policyCard, { backgroundColor: colors.warning + "15", borderColor: colors.warning }]}>
-              <Text style={[s.policyText, { color: colors.foreground }]}>{booking.cancellationPolicy}</Text>
-            </View>
-          </View>
-
-          {/* ==================== SUPPORT ==================== */}
-          <TouchableOpacity
-            style={[s.supportButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => Alert.alert("Support", "Report an issue with this booking")}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="exclamationmark.triangle.fill" size={18} color={colors.error} />
-            <Text style={[s.supportButtonText, { color: colors.error }]}>Report issue</Text>
+          <TouchableOpacity style={[s.mapBtn, { borderColor: colors.primary }]} onPress={handleNavigate}>
+            <IconSymbol name="location.fill" size={16} color={colors.primary} />
+            <Text style={[s.mapBtnText, { color: colors.primary }]}>Open in Maps</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.foreground }]}>Package details</Text>
+          <Text style={[s.pkgName, { color: colors.foreground }]}>{booking.package}</Text>
+          <Text style={[s.pkgDuration, { color: colors.muted }]}>{booking.duration}</Text>
+          {booking.inclusions.map((inc, idx) => (
+            <View key={idx} style={s.inclusionRow}>
+              <IconSymbol name="checkmark.circle.fill" size={14} color={colors.success} />
+              <Text style={[s.inclusionText, { color: colors.foreground }]}>{inc}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.foreground }]}>Payment</Text>
+          <View style={s.payRow}>
+            <Text style={[s.payLabel, { color: colors.muted }]}>Base price</Text>
+            <Text style={[s.payValue, { color: colors.foreground }]}>RM {booking.basePrice}</Text>
+          </View>
+          {booking.addOns.map((addon, idx) => (
+            <View key={idx} style={s.payRow}>
+              <Text style={[s.payLabel, { color: colors.muted }]}>{addon.name}</Text>
+              <Text style={[s.payValue, { color: colors.foreground }]}>RM {addon.price}</Text>
+            </View>
+          ))}
+          <View style={[s.payRow, s.totalRow, { borderTopColor: colors.border }]}>
+            <Text style={[s.totalLabel, { color: colors.foreground }]}>Total</Text>
+            <Text style={[s.totalValue, { color: colors.primary }]}>RM {booking.total}</Text>
+          </View>
+          <View style={s.progressWrap}>
+            <View style={[s.progressBg, { backgroundColor: colors.border }]}>
+              <View style={[s.progressFill, { backgroundColor: colors.success, width: booking.depositPaid ? "33%" : "0%" }]} />
+            </View>
+            <View style={s.progressLabels}>
+              <Text style={[s.progressText, { color: booking.depositPaid ? colors.success : colors.muted }]}>Deposit RM {booking.deposit} {booking.depositPaid ? "✓" : ""}</Text>
+              <Text style={[s.progressText, { color: colors.muted }]}>Balance RM {booking.balance}</Text>
+            </View>
+          </View>
+        </View>
+
+        {booking.notes && (
+          <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Notes</Text>
+            <Text style={[s.notesText, { color: colors.muted }]}>{booking.notes}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity style={[s.reportBtn, { borderColor: colors.error }]} onPress={handleReport}>
+          <IconSymbol name="shield.fill" size={18} color={colors.error} />
+          <Text style={[s.reportText, { color: colors.error }]}>Report an issue</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ==================== STICKY ACTIONS ==================== */}
-      <View style={[s.stickyActions, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-        <TouchableOpacity
-          style={[s.actionButton, { backgroundColor: colors.primary }]}
-          onPress={handleMessage}
-          activeOpacity={0.8}
-        >
-          <IconSymbol name="paperplane.fill" size={18} color="#fff" />
-          <Text style={s.actionButtonText}>Message</Text>
+      <View style={[s.stickyBottom, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        <TouchableOpacity style={[s.actionBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={handleMessage}>
+          <IconSymbol name="bubble.left.fill" size={20} color={colors.primary} />
+          <Text style={[s.actionBtnText, { color: colors.primary }]}>Message</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.actionButton, { backgroundColor: colors.primary }]}
-          onPress={handleNavigate}
-          activeOpacity={0.8}
-        >
-          <IconSymbol name="location.fill" size={18} color="#fff" />
-          <Text style={s.actionButtonText}>Navigate</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.actionButton, { backgroundColor: colors.primary }]}
-          onPress={handleCall}
-          activeOpacity={0.8}
-        >
-          <IconSymbol name="phone.fill" size={18} color="#fff" />
-          <Text style={s.actionButtonText}>Call</Text>
+        <TouchableOpacity style={[s.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]} onPress={handleNavigate}>
+          <IconSymbol name="location.fill" size={20} color="#fff" />
+          <Text style={s.actionBtnTextW}>Navigate</Text>
         </TouchableOpacity>
       </View>
     </ScreenContainer>
@@ -234,206 +173,49 @@ export default function BookingDetailScreen() {
 }
 
 const s = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 80,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  statusCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  statusText: {
-    flex: 1,
-    gap: 2,
-  },
-  statusTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  statusSubtitle: {
-    fontSize: 13,
-  },
-  musicianCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  musicianRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  musicianPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#f0f0f0",
-  },
-  musicianInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  musicianName: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  musicianRole: {
-    fontSize: 13,
-  },
-  section: {
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  detailCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 12,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  detailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  detailText: {
-    flex: 1,
-    gap: 2,
-  },
-  detailLabel: {
-    fontSize: 12,
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  divider: {
-    height: 1,
-  },
-  paymentCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 12,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  priceLabel: {
-    fontSize: 14,
-  },
-  priceValue: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  paymentDetails: {
-    gap: 8,
-  },
-  paymentRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  paymentLabel: {
-    fontSize: 13,
-  },
-  paymentAmount: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  policyCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  policyText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  supportButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  supportButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  stickyActions: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-    borderTopWidth: 1,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 6,
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  scrollContent: { paddingBottom: 24 },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  topTitle: { fontSize: 18, fontWeight: "600" },
+  statusCard: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, padding: 16, borderRadius: 14, borderWidth: 1, gap: 12 },
+  statusDot: { width: 10, height: 10, borderRadius: 5 },
+  statusInfo: { flex: 1 },
+  statusLabel: { fontSize: 16, fontWeight: "700" },
+  statusSub: { fontSize: 13, marginTop: 2 },
+  card: { marginHorizontal: 16, marginTop: 14, padding: 18, borderRadius: 14, borderWidth: 1 },
+  cardRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  avatarText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  cardRowInfo: { flex: 1 },
+  cardLabel: { fontSize: 16, fontWeight: "600" },
+  cardSub: { fontSize: 13 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 14 },
+  detailRow: { flexDirection: "row", gap: 12, marginBottom: 14 },
+  detailInfo: { flex: 1 },
+  detailLabel: { fontSize: 15, fontWeight: "500" },
+  detailSub: { fontSize: 13, marginTop: 2 },
+  mapBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10, borderWidth: 1 },
+  mapBtnText: { fontSize: 14, fontWeight: "600" },
+  pkgName: { fontSize: 16, fontWeight: "600" },
+  pkgDuration: { fontSize: 13, marginBottom: 10 },
+  inclusionRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
+  inclusionText: { fontSize: 14 },
+  payRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  payLabel: { fontSize: 14 },
+  payValue: { fontSize: 14, fontWeight: "500" },
+  totalRow: { borderTopWidth: 0.5, paddingTop: 10, marginTop: 4 },
+  totalLabel: { fontSize: 16, fontWeight: "700" },
+  totalValue: { fontSize: 18, fontWeight: "700" },
+  progressWrap: { marginTop: 14 },
+  progressBg: { height: 6, borderRadius: 3 },
+  progressFill: { height: 6, borderRadius: 3 },
+  progressLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+  progressText: { fontSize: 12 },
+  notesText: { fontSize: 14, lineHeight: 22 },
+  reportBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, marginTop: 14, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
+  reportText: { fontSize: 15, fontWeight: "600" },
+  stickyBottom: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", gap: 12, padding: 16, paddingBottom: 32, borderTopWidth: 0.5 },
+  actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
+  actionBtnText: { fontSize: 15, fontWeight: "600" },
+  actionBtnTextW: { color: "#fff", fontSize: 15, fontWeight: "600" },
 });

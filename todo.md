@@ -337,3 +337,19 @@
 - [x] Check customer dashboard API calls and data normalization
 - [x] Fix any issues preventing musician data from displaying (approved user status + set verified flag)
 - [x] Test customer dashboard shows real musicians
+
+## Fix React Key Warning (Session 27)
+- [x] Fix missing key prop in search.tsx musician list (already had keys)
+- [x] Verify no React warnings in console (restarted dev server)
+
+## Customer Dashboard Rebuild (Session 28)
+- [x] Delete all existing customer screens
+- [x] Rebuild tab layout with 5 tabs (Home, Explore, Bookings, Messages, Profile)
+- [x] Build Home tab (location selector, search, hero card, categories, carousels, book again)
+- [x] Build Explore tab (search, filters bottom sheet, musician cards with badges/price/distance)
+- [x] Build Musician Profile screen (header, packages, media, availability, reviews, sticky CTA)
+- [x] Build Booking stepper (5 steps: event details, package, add-ons, summary/payment, confirmation)
+- [x] Build Bookings tab (Upcoming/Pending/Past, contextual CTAs, booking detail with status/map/payment)
+- [x] Build Messages tab (threads grouped by booking, chat with quick replies, system messages)
+- [x] Build Profile tab (name, addresses, payment methods, favorites, settings, receipts)
+- [x] Enforce Grab-like UX rules (one primary CTA per screen, card-based, sticky CTAs, status badges)

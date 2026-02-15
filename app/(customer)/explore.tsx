@@ -1,562 +1,285 @@
 import {
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  Image,
-  Platform,
-  Alert,
+  Text, View, ScrollView, TouchableOpacity, StyleSheet, TextInput,
+  FlatList, Image, Platform, ActivityIndicator, Modal,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import { useState, useMemo } from "react";
+import { router, useLocalSearchParams } from "expo-router";
 import { trpc } from "@/lib/trpc";
-import { ActivityIndicator } from "react-native";
+import { useMemo, useState } from "react";
 
-interface Musician {
-  id: number;
-  stageName: string | null;
-  coverPhoto?: string | null;
-  rating: number | null;
-  totalReviews: number;
-  verified: boolean;
-  genre?: string | null;
-  fastResponder?: boolean;
-  distance?: number;
-}
+const FILTER_CHIPS = ["Date", "Budget", "Distance", "Genre", "Language", "Event type", "Verified only"];
+const GENRES = ["Acoustic", "Jazz", "Pop", "Rock", "Classical", "R&B", "Traditional", "DJ", "Wedding"];
 
-export default function CustomerExploreScreen() {
+export default function ExploreScreen() {
   const colors = useColors();
-  const [searchQuery, setSearchQuery] = useState("");
+  const params = useLocalSearchParams<{ category?: string }>();
+  const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState<string | undefined>(undefined);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(params.category ? [params.category] : []);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
-  // Fetch musicians
-  const getMusiciansQuery = trpc.browse.getMusicians.useQuery({
-    genre: selectedGenre,
-    location: undefined,
-    search: searchQuery || undefined,
+  const tap = () => { if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); };
+
+  const musiciansQuery = trpc.browse.getMusicians.useQuery({
+    genre: selectedGenres.length === 1 ? selectedGenres[0] : undefined,
+    search: search || undefined,
   });
 
-  // Normalize API response
-  const normalizedMusicians = useMemo(() => {
-    if (!getMusiciansQuery.data) return [];
-    return getMusiciansQuery.data.map((m: any) => ({
+  const musicians = useMemo(() => {
+    if (!musiciansQuery.data) return [];
+    let list = musiciansQuery.data.map((m: any) => ({
       id: m.profile?.id || m.id,
       stageName: m.profile?.stageName || m.stageName || "Musician",
-      coverPhoto: m.profile?.coverPhoto,
-      rating: m.profile?.rating || 0,
+      coverPhoto: m.profile?.coverPhoto || null,
+      rating: Number(m.profile?.rating) || 0,
       totalReviews: m.profile?.totalReviews || 0,
       verified: m.profile?.verified || false,
-      genre: m.profile?.genre,
-      fastResponder: true,
-      distance: Math.random() * 20,
+      genre: m.profile?.genre || "",
+      location: m.profile?.location || "",
+      startingPrice: m.minPrice || null,
+      fastResponder: (m.profile?.totalReviews || 0) > 5,
     }));
-  }, [getMusiciansQuery.data]);
+    if (verifiedOnly) list = list.filter((m) => m.verified);
+    return list;
+  }, [musiciansQuery.data, verifiedOnly]);
 
-  // Mock data (fallback)
-  const mockMusicians: Musician[] = [
-    {
-      id: 1,
-      stageName: "Jazz Quartet",
-      coverPhoto: "https://via.placeholder.com/200",
-      rating: 4.8,
-      totalReviews: 45,
-      verified: true,
-      fastResponder: true,
-      distance: 3,
-    },
-    {
-      id: 2,
-      stageName: "Acoustic Duo",
-      coverPhoto: "https://via.placeholder.com/200",
-      rating: 4.9,
-      totalReviews: 62,
-      verified: true,
-      fastResponder: true,
-      distance: 5,
-    },
-    {
-      id: 3,
-      stageName: "DJ Pro",
-      coverPhoto: "https://via.placeholder.com/200",
-      rating: 4.7,
-      totalReviews: 38,
-      verified: false,
-      fastResponder: false,
-      distance: 8,
-    },
-    {
-      id: 4,
-      stageName: "String Ensemble",
-      coverPhoto: "https://via.placeholder.com/200",
-      rating: 4.6,
-      totalReviews: 28,
-      verified: true,
-      fastResponder: true,
-      distance: 2,
-    },
-  ];
-
-  const handleViewMusician = (musicianId: number) => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push(`/(customer)/musician-profile?id=${musicianId.toString()}`);
+  const toggleGenre = (g: string) => {
+    setSelectedGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
   };
-
-  const handleOpenFilters = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setShowFilters(true);
-  };
-
-  const handleApplyFilters = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setShowFilters(false);
-    Alert.alert("Filters Applied", "Results updated with your filter preferences");
-  };
-
-  const renderMusicianCard = ({ item }: { item: Musician }) => (
-    <TouchableOpacity
-      style={[s.musicianCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      onPress={() => handleViewMusician(item.id)}
-      activeOpacity={0.7}
-    >
-      <View style={s.cardTop}>
-        <Image source={{ uri: item.coverPhoto || "https://via.placeholder.com/200" }} style={s.musicianPhoto} />
-        <View style={s.badges}>
-          {item.verified && (
-            <View style={[s.badge, { backgroundColor: colors.success }]}>
-              <IconSymbol name="checkmark.circle.fill" size={12} color="#fff" />
-              <Text style={s.badgeText}>Verified</Text>
-            </View>
-          )}
-          {item.fastResponder && (
-            <View style={[s.badge, { backgroundColor: colors.primary }]}>
-              <IconSymbol name="bolt.fill" size={12} color="#fff" />
-              <Text style={s.badgeText}>Fast</Text>
-            </View>
-          )}
-        </View>
-      </View>
-      <View style={s.cardInfo}>
-        <Text style={[s.stageName, { color: colors.foreground }]} numberOfLines={1}>
-          {item.stageName || "Musician"}
-        </Text>
-        <View style={s.ratingRow}>
-          <IconSymbol name="star.fill" size={13} color={colors.warning} />
-          <Text style={[s.rating, { color: colors.foreground }]}>
-            {(item.rating || 0).toFixed(1)}
-          </Text>
-          <Text style={[s.reviews, { color: colors.muted }]}>({item.totalReviews || 0})</Text>
-        </View>
-        <View style={s.priceDistanceRow}>
-          <Text style={[s.price, { color: colors.primary }]}>View profile</Text>
-          <View style={s.distanceRow}>
-            <IconSymbol name="location.fill" size={12} color={colors.muted} />
-            <Text style={[s.distance, { color: colors.muted }]}>{(item.distance || 0).toFixed(0)} km</Text>
-          </View>
-        </View>
-      </View>
-      <TouchableOpacity
-        style={[s.viewButton, { backgroundColor: colors.primary }]}
-        onPress={() => handleViewMusician(item.id)}
-        activeOpacity={0.8}
-      >
-        <Text style={s.viewButtonText}>View</Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
 
   return (
     <ScreenContainer className="p-0">
-      <ScrollView
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: colors.background }}
-      >
-        {/* ==================== SEARCH & FILTERS ==================== */}
-        <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <View style={s.searchRow}>
-            <View style={[s.searchBar, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <IconSymbol name="magnifyingglass" size={16} color={colors.muted} />
-              <TextInput
-                style={[s.searchInput, { color: colors.foreground }]}
-                placeholder="Search musicians..."
-                placeholderTextColor={colors.muted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+      {/* ==================== SEARCH HEADER ==================== */}
+      <View style={[s.searchHeader, { borderBottomColor: colors.border }]}>
+        <View style={[s.searchInputRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <IconSymbol name="magnifyingglass" size={20} color={colors.muted} />
+          <TextInput
+            style={[s.searchInput, { color: colors.foreground }]}
+            placeholder="Search musicians, genres..."
+            placeholderTextColor={colors.muted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <IconSymbol name="xmark.circle.fill" size={18} color={colors.muted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[s.filterBtn, { backgroundColor: colors.primary }]}
+          onPress={() => { tap(); setShowFilters(true); }}
+        >
+          <IconSymbol name="slider.horizontal.3" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* ==================== FILTER CHIPS ==================== */}
+      <FlatList
+        data={FILTER_CHIPS}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.chipRow}
+        style={s.chipList}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[s.chip, {
+              backgroundColor: item === "Verified only" && verifiedOnly ? colors.primary : colors.surface,
+              borderColor: colors.border,
+            }]}
+            onPress={() => {
+              tap();
+              if (item === "Verified only") setVerifiedOnly(!verifiedOnly);
+              else setShowFilters(true);
+            }}
+          >
+            <Text style={[s.chipText, {
+              color: item === "Verified only" && verifiedOnly ? "#fff" : colors.foreground,
+            }]}>{item}</Text>
+          </TouchableOpacity>
+        )}
+        keyExtractor={(item) => item}
+      />
+
+      {/* ==================== RESULT COUNT ==================== */}
+      <Text style={[s.resultCount, { color: colors.muted }]}>
+        {musicians.length} musician{musicians.length !== 1 ? "s" : ""} found
+      </Text>
+
+      {/* ==================== RESULTS ==================== */}
+      {musiciansQuery.isLoading ? (
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={musicians}
+          contentContainerStyle={s.listPad}
+          showsVerticalScrollIndicator={false}
+          keyExtractor={(item) => `explore-${item.id}`}
+          ListEmptyComponent={
+            <View style={s.emptyState}>
+              <IconSymbol name="magnifyingglass" size={40} color={colors.muted} />
+              <Text style={[s.emptyText, { color: colors.muted }]}>No musicians found</Text>
             </View>
+          }
+          renderItem={({ item }) => (
             <TouchableOpacity
-              style={[s.filterButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={handleOpenFilters}
+              style={[s.resultCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => { tap(); router.push(`/(customer)/musician-profile?id=${item.id}`); }}
               activeOpacity={0.7}
             >
-              <IconSymbol name="slider.horizontal.3" size={18} color={colors.foreground} />
-            </TouchableOpacity>
-          </View>
-
-          {/* ==================== FILTER CHIPS ==================== */}
-          <FlatList
-            data={["Date", "Budget", "Distance", "Genre", "Language", "Verified"]}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.filterChipsContainer}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[s.filterChip, { backgroundColor: colors.background, borderColor: colors.border }]}
-                onPress={() => {}}
-                activeOpacity={0.7}
-              >
-                <Text style={[s.filterChipText, { color: colors.foreground }]}>{item}</Text>
-              </TouchableOpacity>
-            )}
-            keyExtractor={(item) => item}
-          />
-        </View>
-
-        <View style={s.content}>
-          {/* ==================== RESULTS ==================== */}
-          <FlatList
-              data={normalizedMusicians.length > 0 ? normalizedMusicians : mockMusicians}
-            renderItem={renderMusicianCard}
-            keyExtractor={(item) => item.id.toString()}
-            scrollEnabled={false}
-            contentContainerStyle={s.resultsList}
-          />
-        </View>
-      </ScrollView>
-
-      {/* ==================== FILTERS MODAL ==================== */}
-      {showFilters && (
-        <View style={[s.filterModal, { backgroundColor: colors.surface }]}>
-          <View style={[s.filterHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[s.filterTitle, { color: colors.foreground }]}>Filters</Text>
-            <TouchableOpacity onPress={() => setShowFilters(false)}>
-              <IconSymbol name="xmark.circle.fill" size={24} color={colors.muted} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={s.filterContent} showsVerticalScrollIndicator={false}>
-            <View style={s.filterSection}>
-              <Text style={[s.filterLabel, { color: colors.foreground }]}>Date & Time</Text>
-              <TouchableOpacity
-                style={[s.filterInput, { backgroundColor: colors.background, borderColor: colors.border }]}
-                onPress={() => {}}
-              >
-                <Text style={[s.filterInputText, { color: colors.muted }]}>Select date</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={s.filterSection}>
-              <Text style={[s.filterLabel, { color: colors.foreground }]}>Budget</Text>
-              <View style={[s.sliderContainer, { backgroundColor: colors.background }]}>
-                <Text style={[s.sliderLabel, { color: colors.muted }]}>RM 500 - RM 5000</Text>
-              </View>
-            </View>
-
-            <View style={s.filterSection}>
-              <Text style={[s.filterLabel, { color: colors.foreground }]}>Distance</Text>
-              <View style={[s.sliderContainer, { backgroundColor: colors.background }]}>
-                <Text style={[s.sliderLabel, { color: colors.muted }]}>0 - 50 km</Text>
-              </View>
-            </View>
-
-            <View style={s.filterSection}>
-              <Text style={[s.filterLabel, { color: colors.foreground }]}>Genre</Text>
-              <FlatList
-                data={["Jazz", "Pop", "Classical", "Electronic", "Acoustic"]}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[s.genreChip, { backgroundColor: colors.background, borderColor: colors.border }]}
-                    onPress={() => {}}
-                  >
-                    <Text style={[s.genreText, { color: colors.foreground }]}>{item}</Text>
-                  </TouchableOpacity>
+              <View style={[s.resultPhoto, { backgroundColor: colors.border }]}>
+                {item.coverPhoto ? (
+                  <Image source={{ uri: item.coverPhoto }} style={s.resultPhotoImg} />
+                ) : (
+                  <View style={[s.resultPhotoPlaceholder, { backgroundColor: colors.primary }]}>
+                    <Text style={s.resultInitial}>{(item.stageName || "M")[0].toUpperCase()}</Text>
+                  </View>
                 )}
-                keyExtractor={(item) => item}
-                scrollEnabled={false}
-                numColumns={2}
-                columnWrapperStyle={s.genreRow}
-              />
-            </View>
-
-            <View style={s.filterSection}>
-              <TouchableOpacity
-                style={[s.checkboxRow, { backgroundColor: colors.background }]}
-                onPress={() => {}}
-              >
-                <View style={[s.checkbox, { borderColor: colors.border }]} />
-                <Text style={[s.checkboxLabel, { color: colors.foreground }]}>Only show available</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.checkboxRow, { backgroundColor: colors.background }]}
-                onPress={() => {}}
-              >
-                <View style={[s.checkbox, { borderColor: colors.border }]} />
-                <Text style={[s.checkboxLabel, { color: colors.foreground }]}>Only show verified</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-
-          <TouchableOpacity
-            style={[s.applyButton, { backgroundColor: colors.primary }]}
-            onPress={handleApplyFilters}
-            activeOpacity={0.8}
-          >
-            <Text style={s.applyButtonText}>Show results</Text>
-          </TouchableOpacity>
-        </View>
+              </View>
+              <View style={s.resultBody}>
+                <View style={s.resultNameRow}>
+                  <Text style={[s.resultName, { color: colors.foreground }]} numberOfLines={1}>{item.stageName}</Text>
+                  {item.verified && (
+                    <View style={[s.badge, { backgroundColor: colors.success + "20" }]}>
+                      <Text style={[s.badgeText, { color: colors.success }]}>Verified</Text>
+                    </View>
+                  )}
+                  {item.fastResponder && (
+                    <View style={[s.badge, { backgroundColor: colors.primary + "20" }]}>
+                      <Text style={[s.badgeText, { color: colors.primary }]}>Fast</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={s.resultRatingRow}>
+                  <IconSymbol name="star.fill" size={14} color={colors.warning} />
+                  <Text style={[s.resultRating, { color: colors.foreground }]}> {item.rating.toFixed(1)}</Text>
+                  <Text style={[s.resultReviews, { color: colors.muted }]}> ({item.totalReviews} reviews)</Text>
+                </View>
+                {item.genre ? <Text style={[s.resultGenre, { color: colors.muted }]}>{item.genre}</Text> : null}
+                <View style={s.resultFooter}>
+                  <Text style={[s.resultPrice, { color: colors.primary }]}>
+                    {item.startingPrice ? `from RM ${item.startingPrice}` : "Request quote"}
+                  </Text>
+                  <TouchableOpacity
+                    style={[s.viewBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => { tap(); router.push(`/(customer)/musician-profile?id=${item.id}`); }}
+                  >
+                    <Text style={s.viewBtnText}>View</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
       )}
+
+      {/* ==================== FILTERS BOTTOM SHEET ==================== */}
+      <Modal visible={showFilters} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={[s.filterSheet, { backgroundColor: colors.background }]}>
+            <View style={s.filterHeader}>
+              <Text style={[s.filterTitle, { color: colors.foreground }]}>Filters</Text>
+              <TouchableOpacity onPress={() => setShowFilters(false)}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.filterContent}>
+              <Text style={[s.filterLabel, { color: colors.foreground }]}>Genre</Text>
+              <View style={s.genreGrid}>
+                {GENRES.map((g) => (
+                  <TouchableOpacity
+                    key={g}
+                    style={[s.genreChip, {
+                      backgroundColor: selectedGenres.includes(g) ? colors.primary : colors.surface,
+                      borderColor: selectedGenres.includes(g) ? colors.primary : colors.border,
+                    }]}
+                    onPress={() => toggleGenre(g)}
+                  >
+                    <Text style={[s.genreChipText, {
+                      color: selectedGenres.includes(g) ? "#fff" : colors.foreground,
+                    }]}>{g}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={[s.filterLabel, { color: colors.foreground, marginTop: 20 }]}>Options</Text>
+              <TouchableOpacity
+                style={[s.optionRow, { borderColor: colors.border }]}
+                onPress={() => setVerifiedOnly(!verifiedOnly)}
+              >
+                <Text style={[s.optionText, { color: colors.foreground }]}>Only show verified</Text>
+                <View style={[s.toggle, { backgroundColor: verifiedOnly ? colors.primary : colors.border }]}>
+                  <View style={[s.toggleKnob, { transform: [{ translateX: verifiedOnly ? 18 : 2 }] }]} />
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[s.applyBtn, { backgroundColor: colors.primary }]}
+              onPress={() => { tap(); setShowFilters(false); }}
+            >
+              <Text style={s.applyBtnText}>Show results</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const s = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    gap: 12,
-  },
-  searchRow: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterChipsContainer: {
-    gap: 8,
-    paddingRight: 16,
-  },
-  filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  content: {
-    padding: 16,
-  },
-  resultsList: {
-    gap: 12,
-  },
-  musicianCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  cardTop: {
-    position: "relative",
-    height: 150,
-  },
-  musicianPhoto: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#f0f0f0",
-  },
-  badges: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    gap: 6,
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  cardInfo: {
-    padding: 12,
-    gap: 6,
-  },
-  stageName: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  rating: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  reviews: {
-    fontSize: 12,
-  },
-  priceDistanceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  price: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  distanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  distance: {
-    fontSize: 12,
-  },
-  viewButton: {
-    marginHorizontal: 12,
-    marginBottom: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  viewButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  filterModal: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    maxHeight: "80%",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    zIndex: 100,
-  },
-  filterHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  filterTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  filterContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  filterSection: {
-    marginBottom: 20,
-    gap: 8,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  filterInput: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  filterInputText: {
-    fontSize: 14,
-  },
-  sliderContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  sliderLabel: {
-    fontSize: 13,
-  },
-  genreRow: {
-    gap: 8,
-  },
-  genreChip: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  genreText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 10,
-    marginBottom: 8,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  checkboxLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  applyButton: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  applyButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  searchHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 0.5 },
+  searchInputRow: { flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, gap: 8 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  filterBtn: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  chipList: { maxHeight: 52 },
+  chipRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  chipText: { fontSize: 13, fontWeight: "500" },
+  resultCount: { paddingHorizontal: 20, paddingVertical: 8, fontSize: 13 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
+  listPad: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
+  resultCard: { flexDirection: "row", borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  resultPhoto: { width: 100, height: 120 },
+  resultPhotoImg: { width: "100%", height: "100%" },
+  resultPhotoPlaceholder: { width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
+  resultInitial: { fontSize: 28, fontWeight: "700", color: "#fff" },
+  resultBody: { flex: 1, padding: 12, justifyContent: "space-between" },
+  resultNameRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  resultName: { fontSize: 16, fontWeight: "600" },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  badgeText: { fontSize: 11, fontWeight: "600" },
+  resultRatingRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  resultRating: { fontSize: 13, fontWeight: "500" },
+  resultReviews: { fontSize: 12 },
+  resultGenre: { fontSize: 12, marginTop: 2 },
+  resultFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 },
+  resultPrice: { fontSize: 14, fontWeight: "600" },
+  viewBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16 },
+  viewBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
+  emptyText: { fontSize: 15 },
+  // Filter modal
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  filterSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "80%", paddingBottom: 32 },
+  filterHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, paddingBottom: 12 },
+  filterTitle: { fontSize: 20, fontWeight: "700" },
+  filterContent: { paddingHorizontal: 20, paddingBottom: 20 },
+  filterLabel: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
+  genreGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  genreChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1 },
+  genreChipText: { fontSize: 14, fontWeight: "500" },
+  optionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 0.5 },
+  optionText: { fontSize: 15 },
+  toggle: { width: 44, height: 26, borderRadius: 13, justifyContent: "center" },
+  toggleKnob: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff" },
+  applyBtn: { marginHorizontal: 20, paddingVertical: 16, borderRadius: 14, alignItems: "center" },
+  applyBtnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });
