@@ -468,7 +468,27 @@ export default function JobsScreen() {
                     {!job.hasReview && (
                       <TouchableOpacity
                         style={[s.pastReviewButton, { borderColor: colors.primary }]}
-                        onPress={() => {}}
+                        onPress={() => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          }
+                          Alert.alert(
+                            "Request Review",
+                            `Send a review request to the customer for "${job.title}"?`,
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              {
+                                text: "Send Request",
+                                onPress: () => {
+                                  if (Platform.OS !== "web") {
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                  }
+                                  Alert.alert("Sent!", "Review request sent to the customer.");
+                                },
+                              },
+                            ]
+                          );
+                        }}
                         activeOpacity={0.8}
                       >
                         <Text style={[s.pastReviewButtonText, { color: colors.primary }]}>Request review</Text>

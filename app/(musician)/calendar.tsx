@@ -7,11 +7,13 @@ import {
   Modal,
   Platform,
   Switch,
+  Alert,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
 type EventType = "booked" | "hold" | "blocked" | "available";
@@ -84,6 +86,7 @@ const generateTimeSlots = () => {
 
 export default function CalendarScreen() {
   const colors = useColors();
+  const router = useRouter();
   const [selectedMonth, setSelectedMonth] = useState("February 2026");
   const [autoBuffer, setAutoBuffer] = useState(true);
   const [selectedDay, setSelectedDay] = useState(new Date().toISOString().split("T")[0]);
@@ -160,7 +163,12 @@ export default function CalendarScreen() {
       <View style={[s.container, { backgroundColor: colors.background }]}>
         {/* ==================== TOP CONTROLS ==================== */}
         <View style={[s.topBar, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <TouchableOpacity style={s.monthSelector} onPress={() => {}} activeOpacity={0.7}>
+          <TouchableOpacity style={s.monthSelector} onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            Alert.alert("Month Selector", "Month picker will be available in a future update. Currently showing the current week.");
+          }} activeOpacity={0.7}>
             <Text style={[s.monthText, { color: colors.foreground }]}>{selectedMonth}</Text>
             <IconSymbol name="chevron.down" size={18} color={colors.foreground} />
           </TouchableOpacity>
@@ -273,7 +281,21 @@ export default function CalendarScreen() {
                         borderLeftColor: eventColors.border,
                       },
                     ]}
-                    onPress={() => {}}
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      Alert.alert(
+                        event.title,
+                        `${event.startTime} – ${event.endTime}\nType: ${event.type.charAt(0).toUpperCase() + event.type.slice(1)}`,
+                        event.type === "booked"
+                          ? [
+                              { text: "Close" },
+                              { text: "View Job", onPress: () => router.push("/(musician)/jobs") },
+                            ]
+                          : [{ text: "Close" }]
+                      );
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={[s.eventTitle, { color: eventColors.text }]} numberOfLines={1}>
@@ -328,7 +350,14 @@ export default function CalendarScreen() {
                   <Text style={[s.formLabel, { color: colors.foreground }]}>Date & Time</Text>
                   <TouchableOpacity
                     style={[s.formInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                    onPress={() => {}}
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      // Use the currently selected day from the week strip
+                      setSelectedDate(selectedDay);
+                      Alert.alert("Date Selected", `Date set to ${selectedDay}. Tap a different day on the week strip to change.`);
+                    }}
                     activeOpacity={0.7}
                   >
                     <Text style={[s.formInputText, { color: selectedDate ? colors.foreground : colors.muted }]}>
@@ -339,7 +368,23 @@ export default function CalendarScreen() {
 
                   <TouchableOpacity
                     style={[s.formInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                    onPress={() => {}}
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      const timeOptions = ["09:00 – 12:00", "12:00 – 15:00", "15:00 – 18:00", "18:00 – 21:00", "21:00 – 23:00"];
+                      Alert.alert(
+                        "Select Time Block",
+                        "Choose a time range to block:",
+                        [
+                          ...timeOptions.map((t) => ({
+                            text: t,
+                            onPress: () => setSelectedTime(t),
+                          })),
+                          { text: "Cancel", style: "cancel" },
+                        ]
+                      );
+                    }}
                     activeOpacity={0.7}
                   >
                     <Text style={[s.formInputText, { color: selectedTime ? colors.foreground : colors.muted }]}>
@@ -403,7 +448,13 @@ export default function CalendarScreen() {
                 </TouchableOpacity>
 
                 {/* Advanced rules link */}
-                <TouchableOpacity style={s.advancedLink} onPress={() => {}} activeOpacity={0.7}>
+                <TouchableOpacity style={s.advancedLink} onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  closeBlockTime();
+                  router.push("/(musician)/settings");
+                }} activeOpacity={0.7}>
                   <Text style={[s.advancedLinkText, { color: colors.primary }]}>
                     Advanced rules (working hours, lead time, max gigs)
                   </Text>

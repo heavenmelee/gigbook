@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Alert,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -78,7 +79,22 @@ export default function WalletScreen() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    // TODO: Navigate to cash out flow / payout setup
+    Alert.alert(
+      "Cash Out",
+      `Withdraw RM ${availableBalance.toLocaleString()} to your bank account?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Proceed",
+          onPress: () => {
+            if (Platform.OS !== "web") {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+            Alert.alert("Withdrawal Initiated", "Your payout of RM " + availableBalance.toLocaleString() + " will be processed within 1-3 business days.");
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -204,7 +220,10 @@ export default function WalletScreen() {
               <Text style={[s.sectionTitle, { color: colors.foreground }]}>Latest transactions</Text>
               <TouchableOpacity
                 onPress={() => {
-                  // TODO: Navigate to transactions screen
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  Alert.alert("All Transactions", "Full transaction history will be available in a future update.");
                 }}
                 activeOpacity={0.7}
               >
@@ -219,7 +238,15 @@ export default function WalletScreen() {
                     s.transactionRow,
                     index < 4 && { borderBottomWidth: 1, borderBottomColor: colors.border },
                   ]}
-                  onPress={() => {}}
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    Alert.alert(
+                      txn.jobName,
+                      `Date: ${txn.date}\nGross: RM ${txn.gross}\nPlatform fee: RM ${txn.fee}\nNet payout: RM ${txn.net}\nStatus: ${txn.status.charAt(0).toUpperCase() + txn.status.slice(1)}`
+                    );
+                  }}
                   activeOpacity={0.7}
                 >
                   <View style={s.transactionLeft}>

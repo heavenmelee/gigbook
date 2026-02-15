@@ -96,9 +96,6 @@ export default function ProfileScreen() {
     }
     if (item.route) {
       router.push(item.route as any);
-    } else {
-      // TODO: Navigate to respective screens
-      console.log("Navigate to:", item.id);
     }
   };
 
@@ -106,15 +103,26 @@ export default function ProfileScreen() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    // Find first incomplete item and navigate
+    // Find first incomplete item and navigate to the appropriate screen
     const firstIncomplete = checklist.find((item) => !item.completed);
     if (firstIncomplete) {
-      if (firstIncomplete.id === "packages") {
-        router.push("/(musician)/packages");
-      } else if (firstIncomplete.id === "bio") {
-        router.push("/(musician)/profile-editor");
+      switch (firstIncomplete.id) {
+        case "packages":
+          router.push("/(musician)/packages");
+          break;
+        case "bio":
+          router.push("/(musician)/profile-editor");
+          break;
+        case "video":
+          router.push("/(musician)/media");
+          break;
+        case "equipment":
+          router.push("/(musician)/equipment");
+          break;
+        default:
+          router.push("/(musician)/profile-editor");
+          break;
       }
-      // TODO: Add navigation for other items
     }
   };
 
