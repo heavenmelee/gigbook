@@ -285,7 +285,7 @@ export default function MusicianListingsScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             {/* Modal Header */}
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.foreground }]}>
                 {editingListing ? "Edit Listing" : "Listing Baru"}
               </Text>
@@ -295,10 +295,14 @@ export default function MusicianListingsScreen() {
             </View>
 
             {/* Scrollable Form Content */}
-            <ScrollView contentContainerStyle={styles.formScroll} showsVerticalScrollIndicator={true}>
+            <ScrollView 
+              contentContainerStyle={styles.formScroll}
+              showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+            >
               {/* Title Field */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Tajuk Perkhidmatan *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Tajuk Perkhidmatan</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
                   placeholder="Contoh: Pertunjukan Piano Klasik"
@@ -310,7 +314,7 @@ export default function MusicianListingsScreen() {
 
               {/* Description Field */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Penerangan *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Penerangan</Text>
                 <TextInput
                   style={[styles.input, styles.textArea, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
                   placeholder="Terangkan perkhidmatan anda, pengalaman, dan apa yang anda tawarkan..."
@@ -322,9 +326,12 @@ export default function MusicianListingsScreen() {
                 />
               </View>
 
+              {/* Section Divider */}
+              <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
+
               {/* Category Dropdown */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Kategori *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Kategori</Text>
                 <TouchableOpacity
                   style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setShowCategoryPicker(!showCategoryPicker)}
@@ -371,7 +378,7 @@ export default function MusicianListingsScreen() {
 
               {/* Genre Dropdown */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Genre *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Genre</Text>
                 <TouchableOpacity
                   style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setShowGenrePicker(!showGenrePicker)}
@@ -416,9 +423,12 @@ export default function MusicianListingsScreen() {
                 )}
               </View>
 
+              {/* Section Divider */}
+              <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
+
               {/* Price Field */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Harga (RM) *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Harga (RM)</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
                   placeholder="Contoh: 500"
@@ -431,7 +441,7 @@ export default function MusicianListingsScreen() {
 
               {/* Price Type Selection */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Jenis Harga *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Jenis Harga</Text>
                 <View style={styles.priceTypeContainer}>
                   {(["per_hour", "per_event", "per_day"] as const).map((type) => (
                     <TouchableOpacity
@@ -443,7 +453,7 @@ export default function MusicianListingsScreen() {
                       ]}
                       onPress={() => setFormData({ ...formData, priceType: type })}
                     >
-                      <Text style={{ color: formData.priceType === type ? "#fff" : colors.foreground, fontWeight: "600" }}>
+                      <Text style={{ color: formData.priceType === type ? "#fff" : colors.foreground, fontWeight: "600", fontSize: 14 }}>
                         {priceTypeLabels[type]}
                       </Text>
                     </TouchableOpacity>
@@ -465,22 +475,22 @@ export default function MusicianListingsScreen() {
               </View>
 
               {/* Extra spacing for scrolling */}
-              <View style={{ height: 20 }} />
+              <View style={{ height: 40 }} />
             </ScrollView>
 
             {/* Modal Actions - Fixed at bottom */}
             <View style={[styles.modalActions, { borderTopColor: colors.border }]}>
               <TouchableOpacity
-                style={[styles.modalButton, { borderColor: colors.border }]}
+                style={[styles.modalButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => setShowModal(false)}
               >
-                <Text style={{ color: colors.muted, fontWeight: "600" }}>Batal</Text>
+                <Text style={{ color: colors.muted, fontWeight: "600", fontSize: 16 }}>Batal</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
               >
-                <Text style={{ color: "#fff", fontWeight: "600" }}>Simpan</Text>
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>Simpan</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -728,7 +738,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    maxHeight: "90%",
+    maxHeight: "92%",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     display: "flex",
@@ -740,35 +750,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
   },
 
   /* Form Styles */
   formScroll: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 20,
   },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   fieldLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
   input: {
     padding: 14,
     borderRadius: 10,
     borderWidth: 1,
     fontSize: 16,
+    lineHeight: 22,
   },
   textArea: {
-    height: 100,
+    height: 110,
     textAlignVertical: "top",
+  },
+
+  /* Section Divider */
+  sectionDivider: {
+    height: 1,
+    marginVertical: 20,
+    marginHorizontal: -20,
   },
 
   /* Dropdown Styles */
@@ -783,28 +803,30 @@ const styles = StyleSheet.create({
   dropdownButtonText: {
     fontSize: 16,
     fontWeight: "500",
+    lineHeight: 22,
   },
   pickerContainer: {
     borderWidth: 1,
     borderRadius: 10,
-    marginTop: 8,
-    maxHeight: 200,
+    marginTop: 10,
+    maxHeight: 240,
   },
   pickerItem: {
-    padding: 12,
+    padding: 14,
     borderBottomWidth: 0.5,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   pickerItemText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "500",
+    lineHeight: 22,
   },
 
   priceTypeContainer: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
   priceTypeButton: {
     flex: 1,
@@ -812,6 +834,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   /* Modal Actions */
@@ -819,12 +842,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderTopWidth: 1,
   },
   modalButton: {
     flex: 1,
-    padding: 14,
+    padding: 16,
     borderRadius: 10,
     alignItems: "center",
     borderWidth: 1,

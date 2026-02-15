@@ -160,3 +160,6 @@
 - [x] Fix "Unable to transform response from server" error during login (added genre field to router schemas)
 - [x] Fix logout API call failed error (server restart resolved)
 
+## UI Improvements (Current Session 6)
+- [x] Improve musician listing form modal layout - better spacing, clear fonts, no overlapping text
+
