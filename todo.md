@@ -163,4 +163,5 @@
 ## UI Improvements (Current Session 6)
 - [x] Improve musician listing form modal layout - better spacing, clear fonts, no overlapping text
 - [x] Fix overlapping text in form (picker items overlapping with field labels below)
+- [x] Replace inline pickers with separate modal pickers to fully resolve overlap issue
 

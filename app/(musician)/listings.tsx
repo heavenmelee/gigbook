@@ -1,8 +1,8 @@
-import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, RefreshControl, KeyboardAvoidingView, Platform } from "react-native";
+import { Text, View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, RefreshControl, KeyboardAvoidingView, Platform, FlatList } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
 // Music categories
@@ -31,10 +31,132 @@ const MUSIC_GENRES = [
   "Lain-lain",
 ];
 
+const PRICE_TYPE_LABELS: Record<string, string> = {
+  per_hour: "Sejam",
+  per_event: "Per Event",
+  per_day: "Sehari",
+};
+
+// ===================== PICKER MODAL COMPONENT =====================
+function PickerModal({
+  visible,
+  title,
+  options,
+  selectedValue,
+  onSelect,
+  onClose,
+  colors,
+}: {
+  visible: boolean;
+  title: string;
+  options: string[];
+  selectedValue: string;
+  onSelect: (value: string) => void;
+  onClose: () => void;
+  colors: any;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={pickerStyles.overlay}>
+        <View style={[pickerStyles.container, { backgroundColor: colors.background }]}>
+          {/* Picker Header */}
+          <View style={[pickerStyles.header, { borderBottomColor: colors.border }]}>
+            <Text style={[pickerStyles.title, { color: colors.foreground }]}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={pickerStyles.closeButton}>
+              <IconSymbol name="xmark.circle.fill" size={28} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Picker Options */}
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item}
+            contentContainerStyle={pickerStyles.listContent}
+            renderItem={({ item }) => {
+              const isSelected = selectedValue === item;
+              return (
+                <TouchableOpacity
+                  style={[
+                    pickerStyles.option,
+                    { borderBottomColor: colors.border },
+                    isSelected && { backgroundColor: colors.primary + "15" },
+                  ]}
+                  onPress={() => {
+                    onSelect(item);
+                    onClose();
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Text
+                    style={[
+                      pickerStyles.optionText,
+                      { color: isSelected ? colors.primary : colors.foreground },
+                      isSelected && { fontWeight: "700" },
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                  {isSelected && (
+                    <IconSymbol name="checkmark.circle.fill" size={22} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const pickerStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  container: {
+    maxHeight: "60%",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  closeButton: {
+    padding: 4,
+  },
+  listContent: {
+    paddingBottom: 40,
+  },
+  option: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 0.5,
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+});
+
+// ===================== MAIN SCREEN =====================
 export default function MusicianListingsScreen() {
   const colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showGenrePicker, setShowGenrePicker] = useState(false);
   const [editingListing, setEditingListing] = useState<any>(null);
@@ -53,13 +175,13 @@ export default function MusicianListingsScreen() {
   const updateMutation = trpc.musician.updateListing.useMutation();
   const deleteMutation = trpc.musician.deleteListing.useMutation();
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
-  };
+  }, [refetch]);
 
-  const handleOpenModal = (listing?: any) => {
+  const handleOpenModal = useCallback((listing?: any) => {
     if (listing) {
       setEditingListing(listing);
       setFormData({
@@ -75,8 +197,8 @@ export default function MusicianListingsScreen() {
       setEditingListing(null);
       setFormData({ title: "", description: "", category: "", genre: "", price: "", priceType: "per_event", duration: "" });
     }
-    setShowModal(true);
-  };
+    setShowFormModal(true);
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -92,7 +214,7 @@ export default function MusicianListingsScreen() {
           duration: formData.duration ? parseInt(formData.duration) : undefined,
         });
       }
-      setShowModal(false);
+      setShowFormModal(false);
       refetch();
     } catch (error) {
       console.error("Failed to save listing:", error);
@@ -108,19 +230,13 @@ export default function MusicianListingsScreen() {
     }
   };
 
-  const priceTypeLabels = {
-    per_hour: "Sejam",
-    per_event: "Per Event",
-    per_day: "Sehari",
-  };
-
   const getCategoryIcon = (category: string | null): any => {
-    const iconMap: { [key: string]: any } = {
-      "Solo": "person.fill",
-      "Band": "person.2.fill",
-      "DJ": "waveform.circle.fill",
-      "Orkestra": "music.note.list",
-      "Vokal": "mic.fill",
+    const iconMap: Record<string, any> = {
+      Solo: "person.fill",
+      Band: "person.2.fill",
+      DJ: "waveform.circle.fill",
+      Orkestra: "music.note.list",
+      Vokal: "mic.fill",
       "Instrumen Tradisional": "music.note",
       "Instrumen Barat": "guitar.fill",
       "Lain-lain": "ellipsis",
@@ -134,7 +250,7 @@ export default function MusicianListingsScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {/* Header Section */}
+        {/* Header */}
         <View style={styles.headerSection}>
           <View>
             <Text style={[styles.pageTitle, { color: colors.foreground }]}>Listing Saya</Text>
@@ -151,7 +267,7 @@ export default function MusicianListingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Listings Grid */}
+        {/* Listings */}
         {listings && listings.length > 0 ? (
           <View style={styles.listingsContainer}>
             {listings.map((listing) => (
@@ -159,89 +275,58 @@ export default function MusicianListingsScreen() {
                 key={listing.id}
                 style={[styles.listingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
-                {/* Card Header with Status */}
                 <View style={styles.cardHeader}>
-                  <View style={styles.categoryIconContainer}>
-                    <IconSymbol
-                      name={getCategoryIcon(listing.category)}
-                      size={24}
-                      color={colors.primary}
-                    />
+                  <View style={[styles.categoryIconContainer, { backgroundColor: colors.primary + "15" }]}>
+                    <IconSymbol name={getCategoryIcon(listing.category)} size={24} color={colors.primary} />
                   </View>
-                  <View style={styles.statusBadge}>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: listing.isActive ? colors.success : colors.warning },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.statusText,
-                        { color: listing.isActive ? colors.success : colors.warning },
-                      ]}
-                    >
+                  <View style={[styles.statusBadge, { backgroundColor: listing.isActive ? colors.success + "15" : colors.warning + "15" }]}>
+                    <View style={[styles.statusDot, { backgroundColor: listing.isActive ? colors.success : colors.warning }]} />
+                    <Text style={[styles.statusText, { color: listing.isActive ? colors.success : colors.warning }]}>
                       {listing.isActive ? "Aktif" : "Tidak Aktif"}
                     </Text>
                   </View>
                 </View>
 
-                {/* Card Title */}
                 <Text style={[styles.listingTitle, { color: colors.foreground }]} numberOfLines={2}>
                   {listing.title}
                 </Text>
 
-                {/* Category & Genre Tags */}
                 <View style={styles.tagsContainer}>
                   {listing.category && (
                     <View style={[styles.tag, { backgroundColor: colors.primary + "15" }]}>
-                      <Text style={[styles.tagText, { color: colors.primary }]}>
-                        {listing.category}
-                      </Text>
+                      <Text style={[styles.tagText, { color: colors.primary }]}>{listing.category}</Text>
                     </View>
                   )}
                   {(listing as any).genre && (
-                    <View style={[styles.tag, { backgroundColor: colors.primary + "10" }]}>
-                      <Text style={[styles.tagText, { color: colors.muted }]}>
-                        {(listing as any).genre}
-                      </Text>
+                    <View style={[styles.tag, { backgroundColor: colors.muted + "20" }]}>
+                      <Text style={[styles.tagText, { color: colors.muted }]}>{(listing as any).genre}</Text>
                     </View>
                   )}
                 </View>
 
-                {/* Description */}
                 {listing.description && (
-                  <Text
-                    style={[styles.listingDescription, { color: colors.muted }]}
-                    numberOfLines={2}
-                  >
+                  <Text style={[styles.listingDescription, { color: colors.muted }]} numberOfLines={2}>
                     {listing.description}
                   </Text>
                 )}
 
-                {/* Price & Duration Section */}
-                <View style={styles.priceSection}>
+                <View style={[styles.priceSection, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
                   <View style={styles.priceInfo}>
                     <Text style={[styles.priceLabel, { color: colors.muted }]}>Harga</Text>
-                    <Text style={[styles.priceValue, { color: colors.primary }]}>
-                      RM {listing.price}
-                    </Text>
+                    <Text style={[styles.priceValue, { color: colors.primary }]}>RM {listing.price}</Text>
                     <Text style={[styles.priceType, { color: colors.muted }]}>
-                      {priceTypeLabels[listing.priceType as keyof typeof priceTypeLabels]}
+                      {PRICE_TYPE_LABELS[listing.priceType] || listing.priceType}
                     </Text>
                   </View>
                   {listing.duration && (
                     <View style={styles.durationInfo}>
                       <Text style={[styles.durationLabel, { color: colors.muted }]}>Durasi</Text>
-                      <Text style={[styles.durationValue, { color: colors.foreground }]}>
-                        {listing.duration}
-                      </Text>
+                      <Text style={[styles.durationValue, { color: colors.foreground }]}>{listing.duration}</Text>
                       <Text style={[styles.durationUnit, { color: colors.muted }]}>minit</Text>
                     </View>
                   )}
                 </View>
 
-                {/* Action Buttons */}
                 <View style={styles.actionButtons}>
                   <TouchableOpacity
                     style={[styles.editButton, { backgroundColor: colors.primary + "15", borderColor: colors.primary }]}
@@ -280,236 +365,298 @@ export default function MusicianListingsScreen() {
         )}
       </ScrollView>
 
-      {/* Create/Edit Modal */}
-      <Modal visible={showModal} animationType="slide" transparent onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            {/* Modal Header */}
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+      {/* ==================== FORM MODAL ==================== */}
+      <Modal visible={showFormModal} animationType="slide" transparent onRequestClose={() => setShowFormModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={formStyles.overlay}>
+          <View style={[formStyles.container, { backgroundColor: colors.background }]}>
+            {/* Header */}
+            <View style={[formStyles.header, { borderBottomColor: colors.border }]}>
+              <Text style={[formStyles.headerTitle, { color: colors.foreground }]}>
                 {editingListing ? "Edit Listing" : "Listing Baru"}
               </Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
+              <TouchableOpacity onPress={() => setShowFormModal(false)} style={formStyles.closeBtn}>
                 <IconSymbol name="xmark.circle.fill" size={28} color={colors.muted} />
               </TouchableOpacity>
             </View>
 
-            {/* Scrollable Form Content */}
-            <ScrollView 
-              contentContainerStyle={styles.formScroll}
+            {/* Scrollable Form */}
+            <ScrollView
+              contentContainerStyle={formStyles.formContent}
               showsVerticalScrollIndicator={false}
-              scrollEventThrottle={16}
+              keyboardShouldPersistTaps="handled"
             >
-              {/* Title Field */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Tajuk Perkhidmatan</Text>
+              {/* Tajuk */}
+              <View style={formStyles.field}>
+                <Text style={[formStyles.label, { color: colors.foreground }]}>Tajuk Perkhidmatan</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  style={[formStyles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
                   placeholder="Contoh: Pertunjukan Piano Klasik"
                   placeholderTextColor={colors.muted}
                   value={formData.title}
-                  onChangeText={(text) => setFormData({ ...formData, title: text })}
+                  onChangeText={(t) => setFormData({ ...formData, title: t })}
                 />
               </View>
 
-              {/* Description Field */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Penerangan</Text>
+              {/* Penerangan */}
+              <View style={formStyles.field}>
+                <Text style={[formStyles.label, { color: colors.foreground }]}>Penerangan</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
-                  placeholder="Terangkan perkhidmatan anda, pengalaman, dan apa yang anda tawarkan..."
+                  style={[formStyles.input, formStyles.textArea, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  placeholder="Terangkan perkhidmatan anda..."
                   placeholderTextColor={colors.muted}
                   value={formData.description}
-                  onChangeText={(text) => setFormData({ ...formData, description: text })}
+                  onChangeText={(t) => setFormData({ ...formData, description: t })}
                   multiline
                   numberOfLines={4}
+                  textAlignVertical="top"
                 />
               </View>
 
-              {/* Section Divider */}
-              <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
+              {/* Divider */}
+              <View style={[formStyles.divider, { backgroundColor: colors.border }]} />
 
-              {/* Category Dropdown */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Kategori</Text>
+              {/* Kategori - opens separate modal */}
+              <View style={formStyles.field}>
+                <Text style={[formStyles.label, { color: colors.foreground }]}>Kategori</Text>
                 <TouchableOpacity
-                  style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+                  style={[formStyles.selector, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => setShowCategoryPicker(true)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={[styles.dropdownButtonText, { color: formData.category ? colors.foreground : colors.muted }]}>
+                  <Text style={[formStyles.selectorText, { color: formData.category ? colors.foreground : colors.muted }]}>
                     {formData.category || "Pilih kategori"}
                   </Text>
-                  <IconSymbol
-                    name={showCategoryPicker ? "chevron.up" : "chevron.down"}
-                    size={20}
-                    color={colors.muted}
-                  />
+                  <IconSymbol name="chevron.right" size={18} color={colors.muted} />
                 </TouchableOpacity>
-                {showCategoryPicker && (
-                  <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    {MUSIC_CATEGORIES.map((cat) => (
-                      <TouchableOpacity
-                        key={cat}
-                        style={[
-                          styles.pickerItem,
-                          formData.category === cat && { backgroundColor: colors.primary + "20" },
-                        ]}
-                        onPress={() => {
-                          setFormData({ ...formData, category: cat });
-                          setShowCategoryPicker(false);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.pickerItemText,
-                            { color: formData.category === cat ? colors.primary : colors.foreground },
-                          ]}
-                        >
-                          {cat}
-                        </Text>
-                        {formData.category === cat && (
-                          <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
               </View>
 
-              {/* Genre Dropdown */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Genre</Text>
+              {/* Genre - opens separate modal */}
+              <View style={formStyles.field}>
+                <Text style={[formStyles.label, { color: colors.foreground }]}>Genre</Text>
                 <TouchableOpacity
-                  style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={() => setShowGenrePicker(!showGenrePicker)}
+                  style={[formStyles.selector, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => setShowGenrePicker(true)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={[styles.dropdownButtonText, { color: formData.genre ? colors.foreground : colors.muted }]}>
+                  <Text style={[formStyles.selectorText, { color: formData.genre ? colors.foreground : colors.muted }]}>
                     {formData.genre || "Pilih genre"}
                   </Text>
-                  <IconSymbol
-                    name={showGenrePicker ? "chevron.up" : "chevron.down"}
-                    size={20}
-                    color={colors.muted}
-                  />
+                  <IconSymbol name="chevron.right" size={18} color={colors.muted} />
                 </TouchableOpacity>
-                {showGenrePicker && (
-                  <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    {MUSIC_GENRES.map((genre) => (
-                      <TouchableOpacity
-                        key={genre}
-                        style={[
-                          styles.pickerItem,
-                          formData.genre === genre && { backgroundColor: colors.primary + "20" },
-                        ]}
-                        onPress={() => {
-                          setFormData({ ...formData, genre: genre });
-                          setShowGenrePicker(false);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.pickerItemText,
-                            { color: formData.genre === genre ? colors.primary : colors.foreground },
-                          ]}
-                        >
-                          {genre}
-                        </Text>
-                        {formData.genre === genre && (
-                          <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
               </View>
 
-              {/* Section Divider */}
-              <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
+              {/* Divider */}
+              <View style={[formStyles.divider, { backgroundColor: colors.border }]} />
 
-              {/* Price Field */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Harga (RM)</Text>
+              {/* Harga */}
+              <View style={formStyles.field}>
+                <Text style={[formStyles.label, { color: colors.foreground }]}>Harga (RM)</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  style={[formStyles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
                   placeholder="Contoh: 500"
                   placeholderTextColor={colors.muted}
                   value={formData.price}
-                  onChangeText={(text) => setFormData({ ...formData, price: text })}
+                  onChangeText={(t) => setFormData({ ...formData, price: t })}
                   keyboardType="numeric"
                 />
               </View>
 
-              {/* Price Type Selection */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Jenis Harga</Text>
-                <View style={styles.priceTypeContainer}>
-                  {(["per_hour", "per_event", "per_day"] as const).map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.priceTypeButton,
-                        { borderColor: colors.border },
-                        formData.priceType === type && { backgroundColor: colors.primary, borderColor: colors.primary },
-                      ]}
-                      onPress={() => setFormData({ ...formData, priceType: type })}
-                    >
-                      <Text style={{ color: formData.priceType === type ? "#fff" : colors.foreground, fontWeight: "600", fontSize: 14 }}>
-                        {priceTypeLabels[type]}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+              {/* Jenis Harga */}
+              <View style={formStyles.field}>
+                <Text style={[formStyles.label, { color: colors.foreground }]}>Jenis Harga</Text>
+                <View style={formStyles.priceTypeRow}>
+                  {(["per_hour", "per_event", "per_day"] as const).map((type) => {
+                    const isActive = formData.priceType === type;
+                    return (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          formStyles.priceTypeBtn,
+                          { borderColor: colors.border },
+                          isActive && { backgroundColor: colors.primary, borderColor: colors.primary },
+                        ]}
+                        onPress={() => setFormData({ ...formData, priceType: type })}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[formStyles.priceTypeBtnText, { color: isActive ? "#fff" : colors.foreground }]}>
+                          {PRICE_TYPE_LABELS[type]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
-              {/* Duration Field */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Durasi (minit)</Text>
+              {/* Durasi */}
+              <View style={formStyles.field}>
+                <Text style={[formStyles.label, { color: colors.foreground }]}>Durasi (minit)</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                  style={[formStyles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
                   placeholder="Contoh: 60"
                   placeholderTextColor={colors.muted}
                   value={formData.duration}
-                  onChangeText={(text) => setFormData({ ...formData, duration: text })}
+                  onChangeText={(t) => setFormData({ ...formData, duration: t })}
                   keyboardType="numeric"
                 />
               </View>
 
-              {/* Extra spacing for scrolling */}
-              <View style={{ height: 40 }} />
+              {/* Bottom padding */}
+              <View style={{ height: 20 }} />
             </ScrollView>
 
-            {/* Modal Actions - Fixed at bottom */}
-            <View style={[styles.modalActions, { borderTopColor: colors.border }]}>
+            {/* Fixed Footer Buttons */}
+            <View style={[formStyles.footer, { borderTopColor: colors.border }]}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => setShowModal(false)}
+                style={[formStyles.footerBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                onPress={() => setShowFormModal(false)}
+                activeOpacity={0.7}
               >
-                <Text style={{ color: colors.muted, fontWeight: "600", fontSize: 16 }}>Batal</Text>
+                <Text style={[formStyles.footerBtnText, { color: colors.muted }]}>Batal</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                style={[formStyles.footerBtn, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
+                activeOpacity={0.7}
               >
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>Simpan</Text>
+                <Text style={[formStyles.footerBtnText, { color: "#fff" }]}>Simpan</Text>
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ==================== CATEGORY PICKER MODAL ==================== */}
+      <PickerModal
+        visible={showCategoryPicker}
+        title="Pilih Kategori"
+        options={MUSIC_CATEGORIES}
+        selectedValue={formData.category}
+        onSelect={(val) => setFormData({ ...formData, category: val })}
+        onClose={() => setShowCategoryPicker(false)}
+        colors={colors}
+      />
+
+      {/* ==================== GENRE PICKER MODAL ==================== */}
+      <PickerModal
+        visible={showGenrePicker}
+        title="Pilih Genre"
+        options={MUSIC_GENRES}
+        selectedValue={formData.genre}
+        onSelect={(val) => setFormData({ ...formData, genre: val })}
+        onClose={() => setShowGenrePicker(false)}
+        colors={colors}
+      />
     </ScreenContainer>
   );
 }
 
-const priceTypeLabels = {
-  per_hour: "Sejam",
-  per_event: "Per Event",
-  per_day: "Sehari",
-};
+// ===================== FORM STYLES =====================
+const formStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  container: {
+    maxHeight: "92%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    flexDirection: "column",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  formContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  field: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+  input: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    fontSize: 16,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: "top",
+  },
+  divider: {
+    height: 1,
+    marginBottom: 24,
+  },
+  selector: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  selectorText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  priceTypeRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  priceTypeBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  priceTypeBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  footer: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+  },
+  footerBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  footerBtnText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});
 
+// ===================== LISTING CARD STYLES =====================
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 24 },
-
-  /* Header Section */
   headerSection: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -537,13 +684,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-
-  /* Listings Container */
   listingsContainer: {
     gap: 16,
   },
-
-  /* Listing Card */
   listingCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -566,7 +709,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 126, 164, 0.1)",
   },
   statusBadge: {
     flexDirection: "row",
@@ -575,7 +717,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
   },
   statusDot: {
     width: 8,
@@ -586,16 +727,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-
-  /* Card Title */
   listingTitle: {
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 12,
     lineHeight: 24,
   },
-
-  /* Tags */
   tagsContainer: {
     flexDirection: "row",
     gap: 8,
@@ -611,23 +748,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-
-  /* Description */
   listingDescription: {
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
   },
-
-  /* Price Section */
   priceSection: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 12,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.05)",
-    borderBottomColor: "rgba(0, 0, 0, 0.05)",
     marginBottom: 12,
   },
   priceInfo: {
@@ -664,8 +795,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
-
-  /* Action Buttons */
   actionButtons: {
     flexDirection: "row",
     gap: 10,
@@ -698,8 +827,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-
-  /* Empty State */
   emptyState: {
     alignItems: "center",
     paddingVertical: 80,
@@ -729,140 +856,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
-  },
-
-  /* Modal Styles */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    maxHeight: "92%",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    display: "flex",
-    flexDirection: "column",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
-
-  /* Form Styles */
-  formScroll: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  fieldGroup: {
-    marginBottom: 24,
-    position: "relative",
-    zIndex: 1,
-  },
-  fieldLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 10,
-    letterSpacing: 0.3,
-  },
-  input: {
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  textArea: {
-    height: 110,
-    textAlignVertical: "top",
-  },
-
-  /* Section Divider */
-  sectionDivider: {
-    height: 1,
-    marginVertical: 20,
-    marginHorizontal: -20,
-  },
-
-  /* Dropdown Styles */
-  dropdownButton: {
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    zIndex: 1,
-  },
-  dropdownButtonText: {
-    fontSize: 16,
-    fontWeight: "500",
-    lineHeight: 22,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: 10,
-    marginTop: 10,
-    maxHeight: 240,
-    position: "absolute",
-    top: 60,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  pickerItem: {
-    padding: 14,
-    borderBottomWidth: 0.5,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  pickerItemText: {
-    fontSize: 16,
-    fontWeight: "500",
-    lineHeight: 22,
-  },
-
-  priceTypeContainer: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  priceTypeButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  /* Modal Actions */
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    borderWidth: 1,
   },
 });
