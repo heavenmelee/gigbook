@@ -7,6 +7,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 
 const EVENT_TYPES = ["Wedding", "Corporate", "Birthday", "Cafe/Restaurant", "Festival", "Private party", "Other"];
 const ADD_ONS = [
@@ -58,11 +59,38 @@ export default function CreateBookingScreen() {
   const handleNext = () => { tap(); if (step < 5) setStep(step + 1); };
   const handleBack = () => { tap(); if (step > 1) setStep(step - 1); else router.back(); };
 
-  const handleConfirm = () => {
+  const createBookingMutation = trpc.booking.create.useMutation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
     tap();
-    Alert.alert("Booking Confirmed!", "Your booking request has been sent. The musician will confirm shortly.", [
-      { text: "View booking", onPress: () => router.replace("/(customer)/bookings") },
-    ]);
+    if (!musicianId || !selectedPkg || !date || !time) {
+      Alert.alert("Error", "Please fill in all required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createBookingMutation.mutateAsync({
+        musicianId: parseInt(musicianId),
+        listingId: parseInt(selectedPkg),
+        eventDate: date,
+        eventTime: time,
+        eventEndTime: "",
+        venueName: location,
+        venueAddress: location,
+        specialRequests: `Event type: ${eventType}, Crowd size: ${crowdSize}, Duration: ${duration} hours`,
+        totalAmount: total.toString(),
+      });
+
+      Alert.alert("Booking Confirmed!", "Your booking request has been sent. The musician will confirm shortly.", [
+        { text: "View booking", onPress: () => router.replace("/(customer)/bookings") },
+      ]);
+    } catch (error: any) {
+      Alert.alert("Booking Failed", error.message || "Failed to create booking. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const STEPS = ["Event", "Package", "Add-ons", "Summary", "Confirm"];
@@ -219,8 +247,8 @@ export default function CreateBookingScreen() {
         </View>
       ) : (
         <View style={[s.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-          <TouchableOpacity style={[s.ctaBtn, { backgroundColor: colors.primary }]} onPress={handleConfirm}>
-            <Text style={s.ctaBtnText}>View my bookings</Text>
+          <TouchableOpacity style={[s.ctaBtn, { backgroundColor: colors.primary, opacity: isSubmitting ? 0.6 : 1 }]} onPress={handleConfirm} disabled={isSubmitting}>
+            <Text style={s.ctaBtnText}>{isSubmitting ? "Processing..." : "View my bookings"}</Text>
           </TouchableOpacity>
         </View>
       )}
