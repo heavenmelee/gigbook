@@ -272,3 +272,7 @@
 - [x] Audit Profile tab (main screen, all 6 submenu screens)
 - [x] Fix any broken features or missing integrations
 - [x] Test all action buttons and navigation flows
+
+## Bug Fixes (Current Session 19)
+- [x] Fix tab bar showing submenu screens (help, media, policies, settings, equipment, profile-editor) as separate tabs
+- [x] Only show 5 main tabs: Home, Jobs, Calendar, Wallet, Profile
