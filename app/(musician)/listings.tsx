@@ -765,6 +765,8 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     marginBottom: 24,
+    position: "relative",
+    zIndex: 1,
   },
   fieldLabel: {
     fontSize: 15,
@@ -799,6 +801,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    zIndex: 1,
   },
   dropdownButtonText: {
     fontSize: 16,
@@ -810,6 +813,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 10,
     maxHeight: 240,
+    position: "absolute",
+    top: 60,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   pickerItem: {
     padding: 14,
