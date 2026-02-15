@@ -33,6 +33,7 @@ export default function ProfileScreen() {
 
   // Fetch profile data
   const { data: profile } = trpc.musician.getProfile.useQuery();
+  const { data: packages } = trpc.musician.getPackages.useQuery();
 
   // Calculate profile strength
   const calculateProfileStrength = () => {
@@ -53,12 +54,12 @@ export default function ProfileScreen() {
     checklist.push({ id: "video", title: "Add highlight video", completed: false });
 
     // Check packages (need at least 1)
-    const hasPackages = false; // TODO: Check packages count
-    if (hasPackages) {
+    const packagesCount = packages?.length || 0;
+    if (packagesCount >= 1) {
       score += 30;
-      checklist.push({ id: "packages", title: "Add 3 packages", completed: true });
+      checklist.push({ id: "packages", title: `Add 3 packages (${packagesCount}/3)`, completed: packagesCount >= 3 });
     } else {
-      checklist.push({ id: "packages", title: "Add 3 packages", completed: false });
+      checklist.push({ id: "packages", title: "Add 3 packages (0/3)", completed: false });
     }
 
     // Check equipment

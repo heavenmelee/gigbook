@@ -1,4 +1,4 @@
-import { Text, View, ScrollView, TouchableOpacity, Image, StyleSheet, RefreshControl, Switch, Platform } from "react-native";
+import { Text, View, ScrollView, TouchableOpacity, StyleSheet, Image, Platform, RefreshControl, Switch, Alert } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -84,7 +84,12 @@ export default function MusicianHomeScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={s.locationButton} onPress={() => {}}>
+          <TouchableOpacity style={s.locationButton} onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            Alert.alert("Change Location", "Location selector will be implemented");
+          }}>
             <Text style={[s.locationLabel, { color: colors.muted }]}>Base:</Text>
             <Text style={[s.locationText, { color: colors.foreground }]}>{baseLocation}</Text>
             <IconSymbol name="chevron.down" size={16} color={colors.muted} />
@@ -121,14 +126,24 @@ export default function MusicianHomeScreen() {
               <View style={s.heroActions}>
                 <TouchableOpacity
                   style={[s.heroButton, { backgroundColor: "#fff" }]}
-                  onPress={() => {}}
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    router.push("/(musician)/jobs");
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text style={[s.heroButtonText, { color: colors.primary }]}>View job</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.heroIconButton, { backgroundColor: "rgba(255,255,255,0.2)" }]}
-                  onPress={() => {}}
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    Alert.alert("Message Customer", "Chat feature will be implemented");
+                  }}
                   activeOpacity={0.8}
                 >
                   <IconSymbol name="paperplane.fill" size={20} color="#fff" />
@@ -155,7 +170,12 @@ export default function MusicianHomeScreen() {
           <View style={s.section}>
             <View style={s.sectionHeader}>
               <Text style={[s.sectionTitle, { color: colors.foreground }]}>New requests</Text>
-              <TouchableOpacity onPress={() => {}}>
+              <TouchableOpacity onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push("/(musician)/jobs");
+              }}>
                 <Text style={[s.seeAllLink, { color: colors.primary }]}>See all</Text>
               </TouchableOpacity>
             </View>
@@ -183,7 +203,12 @@ export default function MusicianHomeScreen() {
                   </Text>
                   <TouchableOpacity
                     style={[s.requestButton, { backgroundColor: colors.primary }]}
-                    onPress={() => {}}
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }
+                      router.push("/(musician)/jobs");
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={s.requestButtonText}>Quote now</Text>
@@ -222,7 +247,12 @@ export default function MusicianHomeScreen() {
             </View>
             <TouchableOpacity
               style={[s.todoButton, { backgroundColor: colors.primary }]}
-              onPress={() => {}}
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+                router.push("/(musician)/media");
+              }}
               activeOpacity={0.8}
             >
               <Text style={s.todoButtonText}>Upload now</Text>

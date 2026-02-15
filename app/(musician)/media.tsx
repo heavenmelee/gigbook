@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -33,20 +34,57 @@ export default function MediaScreen() {
     router.back();
   };
 
-  const handleAddVideo = () => {
+  const handleAddVideo = async () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    Alert.alert("Add Video", "Video picker will be implemented");
-    // TODO: Implement video picker
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Please grant media library access to upload videos");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["videos"],
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setHighlightVideo(result.assets[0].uri);
+      Alert.alert("Success", "Video uploaded! (Will be saved to database)");
+      // TODO: Upload to S3 and save URI to database
+    }
   };
 
-  const handleAddPhoto = () => {
+  const handleAddPhoto = async () => {
+    if (gallery.length >= 10) {
+      Alert.alert("Limit Reached", "Maximum 10 photos allowed");
+      return;
+    }
+
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    Alert.alert("Add Photo", "Photo picker will be implemented");
-    // TODO: Implement photo picker
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Please grant media library access to upload photos");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setGallery([...gallery, result.assets[0].uri]);
+      Alert.alert("Success", "Photo added! (Will be saved to database)");
+      // TODO: Upload to S3 and save URI to database
+    }
   };
 
   const handleDeletePhoto = (index: number) => {

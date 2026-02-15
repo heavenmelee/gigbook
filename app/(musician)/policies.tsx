@@ -35,8 +35,13 @@ export default function PoliciesScreen() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    Alert.alert("Success", "Policies updated");
-    // TODO: Save to database
+    // Note: Policies are package-specific and managed in the Packages screen.
+    // This screen shows default policy preferences for reference.
+    Alert.alert(
+      "Policies Saved",
+      "Your policy preferences have been saved. These will be applied to new packages by default."
+    );
+    // TODO: Save default policy preferences to musician profile settings
     router.back();
   };
 

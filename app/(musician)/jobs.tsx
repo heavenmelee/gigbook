@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
   Platform,
+  Alert,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -292,21 +293,43 @@ export default function JobsScreen() {
                     <View style={s.requestActions}>
                       <TouchableOpacity
                         style={[s.requestButtonPrimary, { backgroundColor: colors.primary }]}
-                        onPress={() => {}}
+                        onPress={() => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          }
+                          Alert.alert("Send Quote", "Quote builder will be implemented");
+                        }}
                         activeOpacity={0.8}
                       >
                         <Text style={s.requestButtonPrimaryText}>Send quote</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.requestButtonSecondary, { borderColor: colors.border }]}
-                        onPress={() => {}}
+                        onPress={() => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                          Alert.alert("Ask Customer", "Chat feature will be implemented");
+                        }}
                         activeOpacity={0.8}
                       >
                         <Text style={[s.requestButtonSecondaryText, { color: colors.foreground }]}>Ask</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.requestButtonSecondary, { borderColor: colors.border }]}
-                        onPress={() => {}}
+                        onPress={() => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                          Alert.alert(
+                            "Decline Request",
+                            "Are you sure you want to decline this booking request?",
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              { text: "Decline", style: "destructive", onPress: () => Alert.alert("Declined", "Request declined") },
+                            ]
+                          );
+                        }}
                         activeOpacity={0.8}
                       >
                         <Text style={[s.requestButtonSecondaryText, { color: colors.foreground }]}>Decline</Text>
@@ -322,7 +345,12 @@ export default function JobsScreen() {
                   </Text>
                   <TouchableOpacity
                     style={[s.emptyButton, { backgroundColor: colors.primary }]}
-                    onPress={() => {}}
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }
+                      Alert.alert("Turn on Available", "Availability toggle will be implemented in Home tab");
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={s.emptyButtonText}>Turn on Available</Text>
@@ -376,14 +404,24 @@ export default function JobsScreen() {
                     <View style={s.confirmedActions}>
                       <TouchableOpacity
                         style={[s.confirmedButtonPrimary, { backgroundColor: colors.primary }]}
-                        onPress={() => {}}
+                        onPress={() => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          }
+                          Alert.alert("Job Detail", "Job detail screen will be implemented");
+                        }}
                         activeOpacity={0.8}
                       >
                         <Text style={s.confirmedButtonPrimaryText}>Open job</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.confirmedButtonSecondary, { borderColor: colors.border }]}
-                        onPress={() => {}}
+                        onPress={() => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                          Alert.alert("Chat", "Chat feature will be implemented");
+                        }}
                         activeOpacity={0.8}
                       >
                         <IconSymbol name="paperplane.fill" size={18} color={colors.foreground} />
