@@ -1,5 +1,5 @@
-import { and, desc, eq, gte, like, lte, or, sql, gt, isNull, isNotNull, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { eq, desc, and, gte, like, lte, or, sql, gt, isNull, isNotNull, notInArray } from "drizzle-orm";
 import {
   InsertUser,
   users,
@@ -17,6 +17,8 @@ import {
   xenditInvoices,
   xenditPayouts,
   musicianBankAccounts,
+  conversations,
+  messages,
   InsertMusicianProfile,
   InsertListing,
   InsertPackage,
@@ -30,6 +32,8 @@ import {
   InsertXenditInvoice,
   InsertXenditPayout,
   InsertMusicianBankAccount,
+  InsertConversation,
+  InsertMessage,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1082,4 +1086,193 @@ export async function getCompletedPayouts(limit: number = 50) {
     .where(eq(xenditPayouts.status, "COMPLETED"))
     .orderBy(desc(xenditPayouts.completedAt))
     .limit(limit);
+}
+
+
+// ==================== CHAT ====================
+
+export async function getOrCreateConversation(
+  bookingId: number,
+  userId: number,
+  musicianId: number
+): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Check if conversation already exists
+  const existing = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.bookingId, bookingId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return existing[0].id;
+  }
+
+  // Create new conversation
+  const result = await db.insert(conversations).values({
+    bookingId,
+    userId,
+    musicianId,
+  });
+
+  return result[0].insertId;
+}
+
+export async function getConversations(userId: number, userRole: "user" | "musician") {
+  const db = await getDb();
+  if (!db) return [];
+
+  const condition =
+    userRole === "user"
+      ? eq(conversations.userId, userId)
+      : eq(conversations.musicianId, userId);
+
+  const result = await db
+    .select()
+    .from(conversations)
+    .where(condition)
+    .orderBy(desc(conversations.lastMessageAt))
+    .limit(100);
+
+  return result;
+}
+
+export async function getConversationById(conversationId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getMessages(conversationId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .orderBy(desc(messages.createdAt))
+    .limit(limit);
+
+  return result.reverse(); // Return oldest first
+}
+
+export async function sendMessage(
+  conversationId: number,
+  senderId: number,
+  senderRole: "user" | "musician",
+  content: string,
+  attachmentUrl?: string,
+  attachmentType?: string
+): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(messages).values({
+    conversationId,
+    senderId,
+    senderRole,
+    content,
+    attachmentUrl: attachmentUrl || null,
+    attachmentType: attachmentType || null,
+  });
+
+  const messageId = result[0].insertId;
+
+  // Update conversation's last message
+  const conversation = await getConversationById(conversationId);
+  if (conversation) {
+    const unreadCount =
+      senderRole === "user"
+        ? (conversation.unreadByMusician || 0) + 1
+        : (conversation.unreadByUser || 0) + 1;
+
+    const updateData =
+      senderRole === "user"
+        ? {
+            lastMessageAt: new Date(),
+            lastMessagePreview: content.substring(0, 100),
+            unreadByMusician: unreadCount,
+          }
+        : {
+            lastMessageAt: new Date(),
+            lastMessagePreview: content.substring(0, 100),
+            unreadByUser: unreadCount,
+          };
+
+    await db
+      .update(conversations)
+      .set(updateData)
+      .where(eq(conversations.id, conversationId));
+  }
+
+  return messageId;
+}
+
+export async function markMessagesAsRead(
+  conversationId: number,
+  userId: number,
+  userRole: "user" | "musician"
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  // Mark all unread messages from the other party as read
+  const otherRole = userRole === "user" ? "musician" : "user";
+
+  await db
+    .update(messages)
+    .set({
+      isRead: true,
+      readAt: new Date(),
+    })
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.senderRole, otherRole),
+        eq(messages.isRead, false)
+      )
+    );
+
+  // Reset unread count for this user
+  const updateData =
+    userRole === "user"
+      ? { unreadByUser: 0 }
+      : { unreadByMusician: 0 };
+
+  await db
+    .update(conversations)
+    .set(updateData)
+    .where(eq(conversations.id, conversationId));
+}
+
+export async function getUnreadCount(userId: number, userRole: "user" | "musician"): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const unreadField =
+    userRole === "user"
+      ? conversations.unreadByUser
+      : conversations.unreadByMusician;
+
+  const condition =
+    userRole === "user"
+      ? eq(conversations.userId, userId)
+      : eq(conversations.musicianId, userId);
+
+  const result = await db
+    .select({ total: sql<number>`SUM(${unreadField})` })
+    .from(conversations)
+    .where(condition);
+
+  return result[0]?.total || 0;
 }

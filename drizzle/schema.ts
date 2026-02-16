@@ -283,6 +283,44 @@ export const emailVerificationTokens = mysqlTable("email_verification_tokens", {
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
 
+/**
+ * Conversations - Chat conversations between users and musicians
+ */
+export const conversations = mysqlTable("conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  bookingId: int("bookingId").notNull(),
+  userId: int("userId").notNull(), // Customer
+  musicianId: int("musicianId").notNull(),
+  lastMessageAt: timestamp("lastMessageAt"),
+  lastMessagePreview: text("lastMessagePreview"), // For list display
+  unreadByUser: int("unreadByUser").default(0),
+  unreadByMusician: int("unreadByMusician").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Messages - Individual chat messages
+ */
+export const messages = mysqlTable("messages", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversationId").notNull(),
+  senderId: int("senderId").notNull(), // User or Musician
+  senderRole: mysqlEnum("senderRole", ["user", "musician"]).notNull(),
+  content: text("content").notNull(),
+  attachmentUrl: text("attachmentUrl"), // Optional file/image attachment
+  attachmentType: varchar("attachmentType", { length: 50 }), // image, document, etc
+  isRead: boolean("isRead").default(false),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = typeof conversations.$inferInsert;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = typeof messages.$inferInsert;
+
 
 /**
  * Xendit Invoices - For tracking payment invoices

@@ -856,6 +856,110 @@ export const appRouter = router({
       }),
   }),
 
+  chat: router({
+    // Get or create conversation for a booking
+    getOrCreateConversation: protectedProcedure
+      .input(z.object({ bookingId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const booking = await db.getBookingById(input.bookingId);
+        if (!booking) throw new Error("Booking not found");
+
+        // Verify user is part of this booking
+        if (ctx.user.id !== booking.userId && ctx.user.id !== booking.musicianId) {
+          throw new Error("Unauthorized");
+        }
+
+        const conversationId = await db.getOrCreateConversation(
+          booking.id,
+          booking.userId,
+          booking.musicianId
+        );
+
+        return { conversationId };
+      }),
+
+    // Get all conversations for current user
+    getConversations: protectedProcedure.query(async ({ ctx }) => {
+      const userRole = ctx.user.role === "musician" ? "musician" : "user";
+      const convs = await db.getConversations(ctx.user.id, userRole);
+
+      // Enrich with user/musician info
+      const enriched = await Promise.all(
+        convs.map(async (conv) => {
+          const otherUserId = userRole === "user" ? conv.musicianId : conv.userId;
+          const otherUser = await db.getUserById(otherUserId);
+          const booking = await db.getBookingById(conv.bookingId);
+
+          return {
+            ...conv,
+            otherUser,
+            booking,
+          };
+        })
+      );
+
+      return enriched;
+    }),
+
+    // Get messages for a conversation
+    getMessages: protectedProcedure
+      .input(z.object({ conversationId: z.number(), limit: z.number().default(50) }))
+      .query(async ({ ctx, input }) => {
+        const conv = await db.getConversationById(input.conversationId);
+        if (!conv) throw new Error("Conversation not found");
+
+        // Verify user is part of this conversation
+        if (ctx.user.id !== conv.userId && ctx.user.id !== conv.musicianId) {
+          throw new Error("Unauthorized");
+        }
+
+        // Mark messages as read
+        const userRole = ctx.user.role === "musician" ? "musician" : "user";
+        await db.markMessagesAsRead(input.conversationId, ctx.user.id, userRole);
+
+        return db.getMessages(input.conversationId, input.limit);
+      }),
+
+    // Send a message
+    sendMessage: protectedProcedure
+      .input(
+        z.object({
+          conversationId: z.number(),
+          content: z.string().min(1, "Message cannot be empty"),
+          attachmentUrl: z.string().optional(),
+          attachmentType: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const conv = await db.getConversationById(input.conversationId);
+        if (!conv) throw new Error("Conversation not found");
+
+        // Verify user is part of this conversation
+        if (ctx.user.id !== conv.userId && ctx.user.id !== conv.musicianId) {
+          throw new Error("Unauthorized");
+        }
+
+        const senderRole = ctx.user.role === "musician" ? "musician" : "user";
+        const messageId = await db.sendMessage(
+          input.conversationId,
+          ctx.user.id,
+          senderRole,
+          input.content,
+          input.attachmentUrl,
+          input.attachmentType
+        );
+
+        return { messageId };
+      }),
+
+    // Get unread message count
+    getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const userRole = ctx.user.role === "musician" ? "musician" : "user";
+      const count = await db.getUnreadCount(ctx.user.id, userRole);
+      return { unreadCount: count };
+    }),
+  }),
+
 });
 
 export type AppRouter = typeof appRouter;

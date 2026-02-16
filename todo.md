@@ -373,3 +373,14 @@
 - [ ] Remove (tabs) from root _layout.tsx
 - [ ] Verify only (customer), (musician), (admin) dashboards exist
 - [ ] Test customer sees new dashboard
+
+
+## Real-Time Chat Feature (Current Session)
+- [x] Create conversations and messages database tables
+- [x] Create chat database helper functions
+- [x] Create tRPC chat router endpoints (list conversations, send message, get messages)
+- [x] Build customer chat UI screen
+- [x] Build musician chat UI screen
+- [x] Implement real-time message updates (polling/WebSocket)
+- [ ] Add message notifications
+- [ ] Test chat flow end-to-end
