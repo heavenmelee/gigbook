@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "./db";
-import { users, musicianProfiles, listings, packages } from "../drizzle/schema";
+import { users, musicianProfiles, listings, packages, bookings, conversations, messages } from "../drizzle/schema";
 
 /**
  * Seed script to add test musicians to database
@@ -249,6 +249,137 @@ export async function seedMusicians() {
       } catch (error) {
         console.error(`Error creating musician:`, error);
       }
+    }
+
+    console.log("\n✅ Musicians seeded!");
+
+    // Now create test customer and bookings
+    console.log("\n--- Creating test customer and bookings ---");
+    const testCustomer = {
+      name: "Ahmad Booking",
+      email: "customer@gigbook.my",
+      phone: "+60198765432",
+      role: "user" as const,
+      status: "approved" as const,
+      openId: "test-customer-" + Date.now(),
+      loginMethod: "email" as const,
+    };
+
+    const existingCustomer = await database
+      .select()
+      .from(users)
+      .where(eq(users.email, testCustomer.email))
+      .limit(1);
+
+    let customerId: number;
+    if (existingCustomer.length > 0) {
+      customerId = existingCustomer[0].id;
+      console.log(`Customer ${testCustomer.email} already exists (ID: ${customerId})`);
+    } else {
+      const customerResult = await database.insert(users).values(testCustomer);
+      customerId = customerResult[0].insertId;
+      console.log(`✓ Created customer: ${testCustomer.name} (ID: ${customerId})`);
+    }
+
+    // Get first musician for booking
+    const firstMusician = await database
+      .select()
+      .from(users)
+      .where(eq(users.role, "musician"))
+      .limit(1);
+
+    if (firstMusician.length > 0) {
+      const musicianId = firstMusician[0].id;
+      const musicianName = firstMusician[0].name;
+
+      // Get first listing for booking
+      const firstListing = await database
+        .select()
+        .from(listings)
+        .where(eq(listings.musicianId, musicianId))
+        .limit(1);
+
+      if (firstListing.length === 0) {
+        console.log("No listings found for musician");
+        return;
+      }
+
+      const listingId = firstListing[0].id;
+      const eventDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const dateStr = eventDate.toISOString().split("T")[0]; // YYYY-MM-DD
+
+      // Create test booking
+      const bookingData = {
+        userId: customerId,
+        musicianId,
+        listingId,
+        eventDate: dateStr,
+        eventTime: "18:00",
+        eventEndTime: "23:00",
+        venueName: "Grand Ballroom Hotel KL",
+        venueAddress: "123 Jalan Merdeka, Kuala Lumpur, Malaysia",
+        specialRequests: "Looking for live music for wedding reception. Prefer upbeat songs.",
+        totalAmount: "3000",
+        status: "confirmed" as const,
+      };
+
+      const bookingResult = await database.insert(bookings).values(bookingData);
+      const bookingId = bookingResult[0].insertId;
+      console.log(`✓ Created booking: ${bookingData.venueName} (ID: ${bookingId})`);
+
+      // Create conversation
+      const conversationResult = await database.insert(conversations).values({
+        bookingId,
+        userId: customerId,
+        musicianId,
+        lastMessageAt: new Date(),
+        lastMessagePreview: "Hi, I'm interested in your services for my wedding!",
+        unreadByUser: 0,
+        unreadByMusician: 1,
+      });
+      const conversationId = conversationResult[0].insertId;
+      console.log(`✓ Created conversation (ID: ${conversationId})`);
+
+      // Create test messages
+      const testMessages = [
+        {
+          conversationId,
+          senderId: customerId,
+          senderRole: "user" as const,
+          content: "Hi, I'm interested in your services for my wedding!",
+          isRead: true,
+          createdAt: new Date(Date.now() - 3600000), // 1 hour ago
+        },
+        {
+          conversationId,
+          senderId: musicianId,
+          senderRole: "musician" as const,
+          content: "Hello! Thank you for reaching out. I'd love to perform at your wedding. Can you tell me more about the event?",
+          isRead: false,
+          createdAt: new Date(Date.now() - 1800000), // 30 minutes ago
+        },
+        {
+          conversationId,
+          senderId: customerId,
+          senderRole: "user" as const,
+          content: "It's on March 15th at the Grand Ballroom. We have about 150 guests. Do you have experience with modern pop songs?",
+          isRead: true,
+          createdAt: new Date(Date.now() - 900000), // 15 minutes ago
+        },
+        {
+          conversationId,
+          senderId: musicianId,
+          senderRole: "musician" as const,
+          content: "Absolutely! I have a wide repertoire of modern pop songs. I can customize the setlist based on your preferences. What's your budget?",
+          isRead: false,
+          createdAt: new Date(Date.now() - 300000), // 5 minutes ago
+        },
+      ];
+
+      for (const msg of testMessages) {
+        await database.insert(messages).values(msg);
+      }
+      console.log(`✓ Added ${testMessages.length} test messages to conversation`);
     }
 
     console.log("\n✅ Seed completed!");

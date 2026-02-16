@@ -397,3 +397,11 @@
 - [x] Remove chat-detail from appearing as a tab option
 - [x] Hide chat and chat-detail from tab bar in both customer and musician layouts
 - [ ] Verify tab bar shows only correct tabs after fix
+
+## Real Chat Verification (Current Session)
+- [x] Verify chat.tsx uses tRPC getConversations endpoint (not mock data)
+- [x] Verify chat-detail.tsx uses tRPC getMessages endpoint (not mock data)
+- [x] Verify messages are saved to database via sendMessage endpoint
+- [x] Created seed script with real test booking and conversation
+- [x] Added real test messages to database for testing
+- [x] All chat data is real database data, not dummy/mock
