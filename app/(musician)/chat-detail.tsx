@@ -67,10 +67,16 @@ export default function MusicianChatDetailScreen() {
     return new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  if (!conversationId) {
+  if (!conversationId || convId === 0) {
     return (
       <ScreenContainer>
-        <Text style={{ color: colors.foreground }}>Invalid conversation</Text>
+        <View style={s.errorContainer}>
+          <Text style={[s.errorTitle, { color: colors.foreground }]}>Invalid conversation</Text>
+          <Text style={[s.errorSubtitle, { color: colors.muted }]}>Please go back and select a conversation</Text>
+          <TouchableOpacity style={[s.errorBtn, { backgroundColor: colors.primary }]} onPress={() => { tap(); router.back(); }}>
+            <Text style={s.errorBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </ScreenContainer>
     );
   }
@@ -151,6 +157,11 @@ export default function MusicianChatDetailScreen() {
 
 const s = StyleSheet.create({
   flex: { flex: 1 },
+  errorContainer: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 32 },
+  errorTitle: { fontSize: 18, fontWeight: "600", textAlign: "center" },
+  errorSubtitle: { fontSize: 14, textAlign: "center" },
+  errorBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  errorBtnText: { color: "#fff", fontSize: 16, fontWeight: "600", textAlign: "center" },
   chatHeader: {
     flexDirection: "row",
     alignItems: "center",

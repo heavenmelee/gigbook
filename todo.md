@@ -384,3 +384,10 @@
 - [x] Implement real-time message updates (polling/WebSocket)
 - [ ] Add message notifications
 - [ ] Test chat flow end-to-end
+
+## Chat Bug Fixes (Current Session)
+- [x] Fix chat detail screen showing "Invalid conversation" error
+- [x] Verify conversationId parameter passing from chat list to detail
+- [x] Replace old mock chat.tsx with tRPC-integrated version
+- [x] Add proper error handling and navigation
+- [ ] Test chat flow end-to-end with real data

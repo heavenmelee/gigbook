@@ -34,7 +34,10 @@ export default function MusicianChatScreen() {
 
   const handleOpenChat = (conversationId: number) => {
     tap();
-    router.push(`/(musician)/chat-detail?conversationId=${conversationId}`);
+    router.push({
+      pathname: "/(musician)/chat-detail",
+      params: { conversationId: conversationId.toString() },
+    });
   };
 
   const formatDate = (date: Date | null | undefined) => {
