@@ -391,3 +391,9 @@
 - [x] Replace old mock chat.tsx with tRPC-integrated version
 - [x] Add proper error handling and navigation
 - [ ] Test chat flow end-to-end with real data
+
+## Chat Routing Structure Issues (Current Session)
+- [x] Move chat-detail out of tab bar - should be stack screen under chat tab
+- [x] Remove chat-detail from appearing as a tab option
+- [x] Hide chat and chat-detail from tab bar in both customer and musician layouts
+- [ ] Verify tab bar shows only correct tabs after fix

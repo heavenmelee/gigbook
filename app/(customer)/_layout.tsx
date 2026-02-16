@@ -66,6 +66,7 @@ export default function CustomerTabLayout() {
       <Tabs.Screen name="musician-profile" options={{ href: null }} />
       <Tabs.Screen name="booking-detail" options={{ href: null }} />
       <Tabs.Screen name="chat" options={{ href: null }} />
+      <Tabs.Screen name="chat-detail" options={{ href: null }} />
       <Tabs.Screen name="create-booking" options={{ href: null }} />
     </Tabs>
   );
