@@ -405,3 +405,11 @@
 - [x] Created seed script with real test booking and conversation
 - [x] Added real test messages to database for testing
 - [x] All chat data is real database data, not dummy/mock
+
+
+## Remove Dummy Chat Data (Current Session)
+- [x] Found dummy messages were in database, not hardcoded in code
+- [x] Cleared old test conversations and messages from database
+- [x] Verified chat.tsx uses tRPC getConversations (no hardcoded data)
+- [x] Empty state will show when no conversations exist
+- [x] Chat now shows only real database data

@@ -1,0 +1,13 @@
+{
+  "query": "DELETE FROM messages WHERE conversationId IN (SELECT id FROM conversations WHERE bookingId NOT IN (SELECT id FROM bookings WHERE userId IN (SELECT id FROM users WHERE email = 'customer@gigbook.my'))); DELETE FROM conversations WHERE bookingId NOT IN (SELECT id FROM bookings WHERE userId IN (SELECT id FROM users WHERE email = 'customer@gigbook.my')); SELECT COUNT(*) as remaining_conversations FROM conversations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2ynB7yCcC8fFwgA.9590bf5cc734 --database 5F6XpZZSSf9Qr8ZPCE2Hax --execute DELETE FROM messages WHERE conversationId IN (SELECT id FROM conversations WHERE bookingId NOT IN (SELECT id FROM bookings WHERE userId IN (SELECT id FROM users WHERE email = 'customer@gigbook.my'))); DELETE FROM conversations WHERE bookingId NOT IN (SELECT id FROM bookings WHERE userId IN (SELECT id FROM users WHERE email = 'customer@gigbook.my')); SELECT COUNT(*) as remaining_conversations FROM conversations;",
+  "rows": [
+    {
+      "remaining_conversations": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "remaining_conversations\n0\n",
+  "stderr": "",
+  "execution_time_ms": 2663
+}
