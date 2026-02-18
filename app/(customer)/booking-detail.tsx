@@ -36,7 +36,7 @@ export default function BookingDetailScreen() {
 
   const statusColor = booking.status === "confirmed" ? colors.success : colors.warning;
 
-  const handleMessage = () => { tap(); router.push(`/(customer)/chat?threadId=${booking.id}&name=${booking.musicianName}`); };
+  const handleMessage = () => { tap(); router.push({ pathname: "/(customer)/messages/[bookingId]", params: { bookingId: booking.id.toString() } }); };
   const handleNavigate = () => {
     tap();
     Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(booking.address)}`);

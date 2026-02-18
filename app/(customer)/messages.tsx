@@ -1,38 +1,53 @@
 import {
-  Text, View, TouchableOpacity, StyleSheet, Platform, FlatList, TextInput,
+  Text, View, TouchableOpacity, StyleSheet, Platform, FlatList, TextInput, Image,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useState } from "react";
-
-interface Thread {
-  id: string;
-  musicianName: string;
-  musicianInitial: string;
-  bookingRef: string;
-  lastMessage: string;
-  time: string;
-  unread: number;
-}
-
-const MOCK_THREADS: Thread[] = [
-  { id: "1", musicianName: "Rani", musicianInitial: "R", bookingRef: "Wedding · 22 Feb", lastMessage: "Sure, I can play those songs!", time: "2m ago", unread: 2 },
-  { id: "2", musicianName: "Jazz Trio KL", musicianInitial: "J", bookingRef: "Corporate · 28 Feb", lastMessage: "Quote sent: RM 2,500", time: "1h ago", unread: 0 },
-  { id: "3", musicianName: "DJ Amir", musicianInitial: "D", bookingRef: "Birthday · 2 Mar", lastMessage: "What time should I arrive?", time: "3h ago", unread: 1 },
-];
+import { useState, useEffect } from "react";
+import { trpc } from "@/lib/trpc";
 
 export default function MessagesScreen() {
   const colors = useColors();
   const [search, setSearch] = useState("");
   const tap = () => { if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); };
 
-  const filtered = MOCK_THREADS.filter((t) =>
-    t.musicianName.toLowerCase().includes(search.toLowerCase()) ||
-    t.lastMessage.toLowerCase().includes(search.toLowerCase())
-  );
+  // Fetch all bookings for this customer to show as conversations
+  const { data: bookings = [], isLoading, refetch } = trpc.booking.getMyBookings.useQuery();
+
+  // Auto-refresh every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  // Filter bookings by musician name or venue
+  const filtered = bookings.filter((booking: any) => {
+    const musicianName = booking.musician?.name || "";
+    const venueName = booking.venueName || "";
+    const query = search.toLowerCase();
+    return musicianName.toLowerCase().includes(query) || venueName.toLowerCase().includes(query);
+  });
+
+  const formatDate = (date: Date | null | undefined) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (d.toDateString() === today.toDateString()) {
+      return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    }
+    if (d.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   return (
     <ScreenContainer className="p-0">
@@ -56,7 +71,7 @@ export default function MessagesScreen() {
         data={filtered}
         contentContainerStyle={s.listPad}
         showsVerticalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         ListEmptyComponent={
           <View style={s.emptyState}>
             <IconSymbol name="bubble.left.fill" size={40} color={colors.muted} />
@@ -64,30 +79,35 @@ export default function MessagesScreen() {
             <Text style={[s.emptySubtext, { color: colors.muted }]}>Messages will appear here when you book a musician</Text>
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item: booking }: { item: any }) => (
           <TouchableOpacity
             style={[s.threadCard, { borderBottomColor: colors.border }]}
-            onPress={() => { tap(); router.push(`/(customer)/chat?threadId=${item.id}&name=${item.musicianName}`); }}
+            onPress={() => {
+              tap();
+              router.push({
+                pathname: "/(customer)/messages/[bookingId]",
+                params: { bookingId: booking.id.toString() },
+              });
+            }}
             activeOpacity={0.7}
           >
             <View style={[s.avatar, { backgroundColor: colors.primary }]}>
-              <Text style={s.avatarText}>{item.musicianInitial}</Text>
+              {booking.musician?.profilePhoto ? (
+                <Image source={{ uri: booking.musician.profilePhoto }} style={s.avatarImage} />
+              ) : (
+                <Text style={s.avatarText}>{booking.musician?.name?.charAt(0).toUpperCase() || "?"}</Text>
+              )}
             </View>
             <View style={s.threadBody}>
               <View style={s.threadTop}>
-                <Text style={[s.threadName, { color: colors.foreground }]}>{item.musicianName}</Text>
-                <Text style={[s.threadTime, { color: colors.muted }]}>{item.time}</Text>
+                <Text style={[s.threadName, { color: colors.foreground }]}>{booking.musician?.name || "Unknown"}</Text>
+                <Text style={[s.threadTime, { color: colors.muted }]}>{formatDate(booking.createdAt)}</Text>
               </View>
-              <Text style={[s.bookingRef, { color: colors.primary }]}>{item.bookingRef}</Text>
-              <Text style={[s.lastMsg, { color: item.unread > 0 ? colors.foreground : colors.muted, fontWeight: item.unread > 0 ? "600" : "400" }]} numberOfLines={1}>
-                {item.lastMessage}
+              <Text style={[s.bookingRef, { color: colors.primary }]}>{booking.venueName || "Booking"}</Text>
+              <Text style={[s.lastMsg, { color: colors.muted }]} numberOfLines={1}>
+                {booking.status}
               </Text>
             </View>
-            {item.unread > 0 && (
-              <View style={[s.unreadBadge, { backgroundColor: colors.primary }]}>
-                <Text style={s.unreadText}>{item.unread}</Text>
-              </View>
-            )}
           </TouchableOpacity>
         )}
       />
@@ -104,6 +124,7 @@ const s = StyleSheet.create({
   listPad: { paddingBottom: 24 },
   threadCard: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5, gap: 14 },
   avatar: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  avatarImage: { width: 48, height: 48, borderRadius: 24 },
   avatarText: { color: "#fff", fontSize: 20, fontWeight: "700" },
   threadBody: { flex: 1, gap: 2 },
   threadTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -111,8 +132,6 @@ const s = StyleSheet.create({
   threadTime: { fontSize: 12 },
   bookingRef: { fontSize: 12, fontWeight: "500" },
   lastMsg: { fontSize: 14, marginTop: 2 },
-  unreadBadge: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  unreadText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: "600" },
   emptySubtext: { fontSize: 14, textAlign: "center", paddingHorizontal: 40 },
